@@ -40,9 +40,7 @@ var _ = Describe("Dnm", func() {
 		// Attribute definitions
 		//
 		forumName := t.Attr("ForumName", dnm.String)
-		_ = t.Attr("LastPostDateTime", dnm.String)
 		subject := t.Attr("Subject", dnm.String)
-		//lastPostDateTime := t.Attr("LastPostDateTime", dnm.String)
 		created := t.Attr("Created", dnm.Number)
 		userId := t.Attr("UserId", dnm.String)
 		//
@@ -94,7 +92,6 @@ var _ = Describe("Dnm", func() {
 		})
 		It("should have declared attribute definitions", func() {
 			Expect(assertHasAttr(d, "ForumName", dnm.String)).To(BeTrue())
-			Expect(assertHasAttr(d, "LastPostDateTime", dnm.String)).To(BeTrue())
 			Expect(assertHasAttr(d, "Subject", dnm.String)).To(BeTrue())
 			Expect(assertHasAttr(d, "Created", dnm.Number)).To(BeTrue())
 			Expect(assertHasAttr(d, "UserId", dnm.String)).To(BeTrue())
