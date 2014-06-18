@@ -11,7 +11,6 @@ import (
 )
 
 const (
-	PrimaryKeyName                      = "Key"
 	TableStatusActive                   = "ACTIVE"
 	TableStatusCreating                 = "CREATING"
 	DefaultTableCreateCheckTimeout      = "20s"
