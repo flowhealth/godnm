@@ -92,7 +92,7 @@ func main() {
 	{
 		userId := "uid:1"
 		q := UserIndex.Where(UserId.Equals(userId))
-		if items, err := store.Query(q); err != nil {
+		if items, err := store.Find(q); err != nil {
 			panic(fmt.Sprint(err.Error(), err.Description))
 		} else {
 			fmt.Printf("%#v", items)

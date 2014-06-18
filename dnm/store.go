@@ -25,7 +25,8 @@ var (
 
 type IStore interface {
 	Get(string) (map[string]*dynamodb.Attribute, *TError)
-	Query(query *dynamodb.Query) ([]map[string]*dynamodb.Attribute, *TError)
+	Find(query *dynamodb.Query) ([]map[string]*dynamodb.Attribute, *TError)
+	FindConsistent(query *dynamodb.Query) ([]map[string]*dynamodb.Attribute, *TError)
 	Save(string, ...dynamodb.Attribute) *TError
 	Delete(string) *TError
 	Init() *TError
@@ -181,12 +182,12 @@ func (self *TStore) Save(key string, attrs ...dynamodb.Attribute) *TError {
 	}
 }
 
-func (self *TStore) QueryConsistent(query *dynamodb.Query) ([]map[string]*dynamodb.Attribute, *TError) {
+func (self *TStore) FindConsistent(query *dynamodb.Query) ([]map[string]*dynamodb.Attribute, *TError) {
 	query.ConsistentRead(true)
-	return self.Query(query)
+	return self.Find(query)
 }
 
-func (self *TStore) Query(query *dynamodb.Query) ([]map[string]*dynamodb.Attribute, *TError) {
+func (self *TStore) Find(query *dynamodb.Query) ([]map[string]*dynamodb.Attribute, *TError) {
 	if items, err := self.table.RunQuery(query); err != nil {
 		glog.Errorf("Failed query: %s", query.String())
 		return nil, MakeError(LookupErr.Summary, err.Error())
