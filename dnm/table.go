@@ -2,7 +2,7 @@ package dnm
 
 import (
 	"fmt"
-	"github.com/crowdmob/goamz/dynamodb"
+	"github.com/flowhealth/goamz/dynamodb"
 )
 
 func Describe(name string, definitions func(ITable)) dynamodb.TableDescriptionT {

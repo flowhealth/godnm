@@ -1,6 +1,6 @@
 package dnm
 
-import "github.com/crowdmob/goamz/dynamodb"
+import "github.com/flowhealth/goamz/dynamodb"
 
 type tProjection struct {
 	projection *dynamodb.ProjectionT

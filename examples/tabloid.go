@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/superduper/godnm/dnm"
+	"github.com/flowhealth/godnm/dnm"
 )
 
 func main() {
