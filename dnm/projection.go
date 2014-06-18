@@ -12,7 +12,7 @@ func makeProjection(projection *dynamodb.ProjectionT, keySchema iKeySchema) iPro
 }
 
 type iProjection interface {
-	Include(...*dynamodb.AttributeDefinitionT)
+	Include(...IAttr)
 	All()
 	KeysOnly()
 }
@@ -43,11 +43,12 @@ func (self *tProjection) isNonKeyAttr(nonKeyAttr *dynamodb.AttributeDefinitionT)
 	return true
 }
 
-func (self *tProjection) Include(attrs ...*dynamodb.AttributeDefinitionT) {
+func (self *tProjection) Include(attrs ...IAttr) {
 	if len(attrs)+len(self.keySchema.Items()) > ProjectionNonKeyAttrLimit {
 		panic("Incorrect table definition: projection cant include more than 20 non-key attributes")
 	}
-	for _, v := range attrs {
+	for _, i := range attrs {
+		v := i.Def()
 		if !self.isNonKeyAttr(v) {
 			panic("Incorrect table definition: projection cant include key attribute in non-key attr list")
 		}

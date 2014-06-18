@@ -27,9 +27,9 @@ type tGlobalIndex struct {
 	tIndex
 }
 
-func makeGlobalIndex(gidef *dynamodb.GlobalSecondaryIndexT) iGlobalIndex {
+func makeGlobalIndex(tableName string, gidef *dynamodb.GlobalSecondaryIndexT) iGlobalIndex {
 	schema := makeGlobalIndexKeySchema(gidef)
-	idx := tIndex{schema}
+	idx := tIndex{gidef.IndexName, tableName, schema}
 	return &tGlobalIndex{gidef, idx}
 }
 

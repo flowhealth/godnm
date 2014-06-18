@@ -13,6 +13,8 @@ type iKeySchema interface {
 /////
 
 type tIndex struct {
+	name      string
+	tableName string
 	keySchema iKeySchema
 }
 
@@ -60,10 +62,17 @@ func (self *tIndex) tryAddKey(typ string, attr *dynamodb.AttributeDefinitionT) {
 	self.keySchema.Append(k)
 }
 
-func (self *tIndex) Hash(attr *dynamodb.AttributeDefinitionT) {
-	self.tryAddKey(KeyHash, attr)
+func (self *tIndex) Hash(attr IAttr) {
+	self.tryAddKey(KeyHash, attr.Def())
 }
 
-func (self *tIndex) Range(attr *dynamodb.AttributeDefinitionT) {
-	self.tryAddKey(KeyRange, attr)
+func (self *tIndex) Range(attr IAttr) {
+	self.tryAddKey(KeyRange, attr.Def())
+}
+
+func (self *tIndex) Where(conds ...dynamodb.AttributeComparison) *dynamodb.Query {
+	q := dynamodb.NewQueryFor(self.tableName)
+	q.AddKeyConditions(conds)
+	q.AddIndex(self.name)
+	return q
 }

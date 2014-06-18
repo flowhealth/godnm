@@ -28,9 +28,9 @@ type tLocalIndex struct {
 	keySchemaProxy iKeySchema
 }
 
-func makeLocalIndex(lidef *dynamodb.LocalSecondaryIndexT) iLocalIndex {
+func makeLocalIndex(tableName string, lidef *dynamodb.LocalSecondaryIndexT) iLocalIndex {
 	schema := makeLocalIndexKeySchemaProxy(lidef)
-	idx := tIndex{schema}
+	idx := tIndex{lidef.IndexName, tableName, schema}
 	return &tLocalIndex{idx, lidef, schema}
 }
 

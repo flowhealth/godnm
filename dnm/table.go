@@ -12,7 +12,8 @@ func Describe(name string, definitions func(ITable)) dynamodb.TableDescriptionT 
 }
 
 type ITable interface {
-	Attr(name, typ string) *dynamodb.AttributeDefinitionT
+	KeyAttr(name, typ string) *tAttr
+	NonKeyAttr(name, typ string) *tAttr
 	PrimaryKey() iPrimaryKey
 	GlobalIndex(name string) iGlobalIndex
 	LocalIndex(name string) iLocalIndex
@@ -20,20 +21,24 @@ type ITable interface {
 }
 
 type iGlobalIndex interface {
-	Hash(*dynamodb.AttributeDefinitionT)
-	Range(*dynamodb.AttributeDefinitionT)
+	Hash(IAttr)
+	Range(IAttr)
 	ProvisionedThroughput() iProvisionedThroughput
 	Projection() iProjection
+	Where(conds ...dynamodb.AttributeComparison) *dynamodb.Query
 }
 
 type iLocalIndex interface {
-	Hash(*dynamodb.AttributeDefinitionT)
-	Range(*dynamodb.AttributeDefinitionT)
+	Hash(IAttr)
+	Range(IAttr)
 	Projection() iProjection
+	Where(conds ...dynamodb.AttributeComparison) *dynamodb.Query
 }
 
 type tTable struct {
 	dynamodb.TableDescriptionT
+	attrNames []string
+	name      string
 }
 
 func makeTable(name string) *tTable {
@@ -42,28 +47,37 @@ func makeTable(name string) *tTable {
 		KeySchema:              []dynamodb.KeySchemaT{},
 		ProvisionedThroughput:  dynamodb.ProvisionedThroughputT{},
 		GlobalSecondaryIndexes: []dynamodb.GlobalSecondaryIndexT{},
-	}}
+	}, []string{}, name}
 }
 
-func (self *tTable) Attr(name, typ string) *dynamodb.AttributeDefinitionT {
-	if !self.isUniqueAttrName(name) {
+func (self *tTable) KeyAttr(name, typ string) *tAttr {
+	if !self.tryClaimAttrName(name) {
 		panic(fmt.Sprintf("Incorrect table definition: duplicate attr name %s", name))
 	}
 	attr := dynamodb.AttributeDefinitionT{Name: name, Type: typ}
 	self.AttributeDefinitions = append(self.AttributeDefinitions, attr)
-	return &attr
+	return makeAttr(&attr)
+}
+
+func (self *tTable) NonKeyAttr(name, typ string) *tAttr {
+	if !self.tryClaimAttrName(name) {
+		panic(fmt.Sprintf("Incorrect table definition: duplicate attr name %s", name))
+	}
+	attr := dynamodb.AttributeDefinitionT{Name: name, Type: typ}
+	return makeAttr(&attr)
 }
 
 func (self *tTable) PrimaryKey() iPrimaryKey {
 	return makePrimaryKey(self)
 }
 
-func (self *tTable) isUniqueAttrName(name string) bool {
-	for _, v := range self.AttributeDefinitions {
-		if v.Name == name {
+func (self *tTable) tryClaimAttrName(name string) bool {
+	for _, v := range self.attrNames {
+		if v == name {
 			return false
 		}
 	}
+	self.attrNames = append(self.attrNames, name)
 	return true
 }
 
@@ -94,7 +108,7 @@ func (self *tTable) addGlobalIndex(name string) *dynamodb.GlobalSecondaryIndexT 
 
 func (self *tTable) GlobalIndex(name string) iGlobalIndex {
 	idx := self.addGlobalIndex(name)
-	return makeGlobalIndex(idx)
+	return makeGlobalIndex(self.name, idx)
 }
 
 func (self *tTable) isLocalIndexUniqueName(name string) bool {
@@ -125,7 +139,7 @@ func (self *tTable) addLocalIndex(name string) *dynamodb.LocalSecondaryIndexT {
 
 func (self *tTable) LocalIndex(name string) iLocalIndex {
 	idx := self.addLocalIndex(name)
-	return makeLocalIndex(idx)
+	return makeLocalIndex(self.name, idx)
 }
 
 func (self *tTable) ProvisionedThroughput() iProvisionedThroughput {
