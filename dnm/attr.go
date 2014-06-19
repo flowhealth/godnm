@@ -57,6 +57,13 @@ func (self *tAttr) Equals(val string) dynamodb.AttributeComparison {
 	}
 }
 
+func (self *tAttr) NotEquals(val string) dynamodb.AttributeComparison {
+	return dynamodb.AttributeComparison{self.def.Name,
+		dynamodb.COMPARISON_NOT_EQUAL,
+		[]dynamodb.Attribute{self.Is(val)},
+	}
+}
+
 func makeAttr(attr *dynamodb.AttributeDefinitionT) *tAttr {
 	return &tAttr{attr}
 }

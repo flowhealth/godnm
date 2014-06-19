@@ -21,6 +21,8 @@ var (
 	InitUnknownStatusErr = MakeError("Failed to initialize table", "DynamoDB has returned table status that is unknown")
 	DeleteErr            = MakeError("Failed to delete record", "...")
 	SaveErr              = MakeError("Failed to save record", "...")
+	UpdateErr            = MakeError("Failed to update record", "...")
+	UpdateCollectionErr  = MakeError("Failed to update collection", "...")
 	LookupErr            = MakeError("Failed to lookup record", "...")
 	NotFoundErr          = MakeError("Record wasnt found", "...")
 )

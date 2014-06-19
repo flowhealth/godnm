@@ -5,10 +5,11 @@ import "github.com/flowhealth/goamz/dynamodb"
 type iPrimaryKey interface {
 	Hash(IAttr)
 	Range(IAttr)
+	Factory() IKeyFactory
 }
 
 type tPrimaryKey struct {
-	table *tTable
+	tIndex
 }
 
 type TTableKeySchema struct {
@@ -28,5 +29,5 @@ func makeTableKeySchema(table *tTable) iKeySchema {
 }
 
 func makePrimaryKey(table *tTable) iPrimaryKey {
-	return &tIndex{"PK_IGNORE", "PK_IGNORE", makeTableKeySchema(table)}
+	return &tPrimaryKey{tIndex{"PK_IGNORE", "PK_IGNORE", makeTableKeySchema(table)}}
 }

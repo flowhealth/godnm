@@ -39,10 +39,10 @@ var _ = Describe("Dnm", func() {
 		//
 		// Attribute definitions
 		//
-		forumName := t.Attr("ForumName", dnm.String)
-		subject := t.Attr("Subject", dnm.String)
-		created := t.Attr("Created", dnm.Number)
-		userId := t.Attr("UserId", dnm.String)
+		forumName := t.KeyAttr("ForumName", dnm.String)
+		subject := t.KeyAttr("Subject", dnm.String)
+		created := t.KeyAttr("Created", dnm.Number)
+		userId := t.KeyAttr("UserId", dnm.String)
 		//
 		// Primary Key
 		//

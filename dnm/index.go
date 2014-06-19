@@ -10,6 +10,10 @@ type iKeySchema interface {
 	Append(dynamodb.KeySchemaT)
 }
 
+type IKeyFactory interface {
+	Key(dynamodb.Attribute, ...dynamodb.Attribute) *dynamodb.Key
+}
+
 /////
 
 type tIndex struct {
@@ -19,20 +23,20 @@ type tIndex struct {
 }
 
 func (self *tIndex) hasHashKey() bool {
-	return self.hasKey(KeyHash)
+	return self.attrNameByKeyType(KeyHash) != ""
 }
 
 func (self *tIndex) hasRangeKey() bool {
-	return self.hasKey(KeyRange)
+	return self.attrNameByKeyType(KeyRange) != ""
 }
 
-func (self *tIndex) hasKey(typ string) bool {
+func (self *tIndex) attrNameByKeyType(typ string) string {
 	for _, v := range self.keySchema.Items() {
 		if v.KeyType == typ {
-			return true
+			return v.AttributeName
 		}
 	}
-	return false
+	return ""
 }
 
 func (self *tIndex) canAddKey(typ string) bool {
@@ -75,4 +79,35 @@ func (self *tIndex) Where(conds ...dynamodb.AttributeComparison) *dynamodb.Query
 	q.AddKeyConditions(conds)
 	q.AddIndex(self.name)
 	return q
+}
+
+func (self *tIndex) Factory() IKeyFactory {
+	return self
+}
+
+func (self *tIndex) Key(hash dynamodb.Attribute, maybeRange ...dynamodb.Attribute) *dynamodb.Key {
+	expectedName := self.attrNameByKeyType(KeyHash)
+	if expectedName != hash.Name {
+		panic(fmt.Sprintf("Illegal key, hash key attribute name is incorrect, expected: %s, got %s", expectedName, hash.Name))
+	}
+	if len(maybeRange) == 1 {
+		if self.hasRangeKey() {
+			rang := maybeRange[1]
+			expectedName := self.attrNameByKeyType(KeyRange)
+			if expectedName == rang.Name {
+				return &dynamodb.Key{HashKey: hash.Value, RangeKey: rang.Value}
+			} else {
+				panic(fmt.Sprintf("Illegal key, range key attribute name is incorrect, expected: %s, got %s", expectedName, rang.Name))
+			}
+		} else {
+			panic("Illegal key, range wasnt defined for this index")
+		}
+	} else if len(maybeRange) > 1 {
+		panic("Illegal key, cant have multiple range attributes")
+	} else {
+		if self.hasRangeKey() {
+			panic("Illegal key, range is required but want specified")
+		}
+		return &dynamodb.Key{HashKey: hash.Value}
+	}
 }

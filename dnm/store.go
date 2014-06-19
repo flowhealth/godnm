@@ -17,6 +17,7 @@ const (
 	DefaultTableCreateCheckPollInterval = "3s"
 	DefaultReadCapacity                 = 1
 	DefaultWriteCapacity                = 1
+	ActionAttributeUpdate               = "PUT"
 )
 
 var (
@@ -24,11 +25,10 @@ var (
 )
 
 type IStore interface {
-	Get(string) (map[string]*dynamodb.Attribute, *TError)
+	Get(key *dynamodb.Key) (map[string]*dynamodb.Attribute, *TError)
 	Find(query *dynamodb.Query) ([]map[string]*dynamodb.Attribute, *TError)
-	FindConsistent(query *dynamodb.Query) ([]map[string]*dynamodb.Attribute, *TError)
-	Save(string, ...dynamodb.Attribute) *TError
-	Delete(string) *TError
+	Save(...dynamodb.Attribute) *TError
+	Delete(key *dynamodb.Key) *TError
 	Init() *TError
 	Destroy() *TError
 }
@@ -92,32 +92,32 @@ func (self *TStore) findTableByName(name string) bool {
 
 func (self *TStore) Init() *TError {
 	tableName := self.tableDesc.TableName
-	glog.V(3).Infof("Initializing KeyAttrStore(%s) table", tableName)
+	glog.V(3).Infof("Initializing dnm.StoreStore(%s) table", tableName)
 	tableExists := self.findTableByName(tableName)
 	if tableExists {
-		glog.V(3).Infof("KeyAttrStore table '%s' exists, skipping init", tableName)
+		glog.V(3).Infof("dnm.StoreStore table '%s' exists, skipping init", tableName)
 		glog.V(3).Infof("Waiting until table '%s' becomes active", tableName)
 		self.waitUntilTableIsActive(tableName)
-		glog.V(3).Infof("KeyAttrStore table '%s' is active", tableName)
+		glog.V(3).Infof("dnm.StoreStore table '%s' is active", tableName)
 		return nil
 	} else {
-		glog.Infof("Creating KeyAttrStore table '%s'", tableName)
+		glog.Infof("Creating dnm.StoreStore table '%s'", tableName)
 		status, err := self.dynamoServer.CreateTable(*self.tableDesc)
 		if err != nil {
-			glog.Fatalf("Unexpected error: %s during KeyAttrStore table intialization, cannot proceed", err.Error())
+			glog.Fatalf("Unexpected error: %s during dnm.StoreStore table intialization, cannot proceed", err.Error())
 			return InitGeneralErr
 		}
 		if status == TableStatusCreating {
-			glog.V(3).Infof("Waiting until KeyAttrStore table '%s' becomes active", tableName)
+			glog.V(3).Infof("Waiting until dnm.StoreStore table '%s' becomes active", tableName)
 			self.waitUntilTableIsActive(tableName)
-			glog.V(3).Infof("KeyAttrStore table '%s' become active", tableName)
+			glog.V(3).Infof("dnm.StoreStore table '%s' become active", tableName)
 			return nil
 		}
 		if status == TableStatusActive {
-			glog.V(3).Infof("KeyAttrStore table '%s' is active", tableName)
+			glog.V(3).Infof("dnm.StoreStore table '%s' is active", tableName)
 			return nil
 		}
-		err = fmt.Errorf("Unexpected status: %s during KeyAttrStore table intialization, cannot proceed", status)
+		err = fmt.Errorf("Unexpected status: %s during dnm.StoreStore table intialization, cannot proceed", status)
 		glog.Fatal(err)
 		return InitUnknownStatusErr
 	}
@@ -160,9 +160,9 @@ func (self *TStore) Destroy() *TError {
 	return nil
 }
 
-func (self *TStore) Delete(key string) *TError {
+func (self *TStore) Delete(key *dynamodb.Key) *TError {
 	glog.V(5).Infof("Deleting item with key : %s", key)
-	ok, err := self.table.DeleteItem(makeItemKey(key))
+	ok, err := self.table.DeleteItem(key)
 	if ok {
 		glog.V(5).Infof("Succeed delete item : %s", key)
 		return nil
@@ -172,19 +172,15 @@ func (self *TStore) Delete(key string) *TError {
 	}
 }
 
-func (self *TStore) Save(key string, attrs ...dynamodb.Attribute) *TError {
-	glog.V(5).Infof("Saving item with key : %s", key)
-	if ok, err := self.table.PutItem(key, "", attrs); ok {
-		return nil
-	} else {
-		glog.Errorf("Failed to save because : %s", err.Error())
+func (self *TStore) Save(attrs ...dynamodb.Attribute) *TError {
+	query := dynamodb.NewQuery(self.table)
+	query.AddItem(attrs)
+	if _, err := self.table.RunPutItemQuery(query); err != nil {
+		glog.Errorf("Failed save query: %s", query.String())
 		return SaveErr
+	} else {
+		return nil
 	}
-}
-
-func (self *TStore) FindConsistent(query *dynamodb.Query) ([]map[string]*dynamodb.Attribute, *TError) {
-	query.ConsistentRead(true)
-	return self.Find(query)
 }
 
 func (self *TStore) Find(query *dynamodb.Query) ([]map[string]*dynamodb.Attribute, *TError) {
@@ -197,9 +193,9 @@ func (self *TStore) Find(query *dynamodb.Query) ([]map[string]*dynamodb.Attribut
 	}
 }
 
-func (self *TStore) Get(key string) (map[string]*dynamodb.Attribute, *TError) {
+func (self *TStore) Get(key *dynamodb.Key) (map[string]*dynamodb.Attribute, *TError) {
 	glog.V(5).Infof("Getting item with pk: %s", key)
-	attrMap, _err := self.table.GetItem(makeItemKey(key))
+	attrMap, _err := self.table.GetItem(key)
 	if _err == nil {
 		glog.V(5).Infof("Succeed item %s fetch, got: %v", key, attrMap)
 	} else {
@@ -210,8 +206,4 @@ func (self *TStore) Get(key string) (map[string]*dynamodb.Attribute, *TError) {
 		}
 	}
 	return attrMap, nil
-}
-
-func makeItemKey(key string) *dynamodb.Key {
-	return &dynamodb.Key{HashKey: key}
 }

@@ -10,6 +10,7 @@ func main() {
 	var (
 		Id, UserId, IpAddr, UserAgent dnm.IAttr
 		UserIndex                     dnm.IIndex
+		PKIndex                       dnm.IKeyFactory
 	)
 	d := dnm.Describe("Sessions-Test", func(t dnm.ITable) {
 		//
@@ -20,7 +21,9 @@ func main() {
 		IpAddr = t.KeyAttr("IpAddr", dnm.String)
 		UserAgent = t.NonKeyAttr("UserAgent", dnm.String)
 		{
-			t.PrimaryKey().Hash(Id)
+			pk := t.PrimaryKey()
+			pk.Hash(Id)
+			PKIndex = pk.Factory()
 		}
 		//
 		// Provisioning
@@ -36,6 +39,7 @@ func main() {
 		{
 			idx := t.GlobalIndex("UserIndex")
 			idx.Hash(UserId)
+			idx.Range(Id)
 			idx.Projection().All()
 			{
 				p := idx.ProvisionedThroughput()
@@ -70,23 +74,32 @@ func main() {
 		userAgent := "ua:ie"
 		ipAddr := "127.0.0.1"
 
-		store.Save(sid,
+		if err := store.Save(Id.Is(sid),
 			UserId.Is(userId),
 			UserAgent.Is(userAgent),
 			IpAddr.Is(ipAddr),
-		)
+		); err != nil {
+			panic(fmt.Sprint("Failed to insert", sid, "because of", err.Error()))
+		} else {
+			fmt.Println("Insert ok for", sid)
+		}
 	}
 	{
 		sid := "sid:2"
 		userId := "uid:1"
 		userAgent := "ua:ie"
 		ipAddr := "127.0.0.1"
-
-		store.Save(sid,
+		if err := store.Save(
+			Id.Is(sid),
 			UserId.Is(userId),
 			UserAgent.Is(userAgent),
 			IpAddr.Is(ipAddr),
-		)
+		); err != nil {
+			panic(fmt.Sprint("Failed to insert", sid, "because of", err.Error()))
+		} else {
+			fmt.Println("Insert ok for", sid)
+		}
+
 	}
 	// query against global secondary index
 	{
@@ -95,13 +108,34 @@ func main() {
 		if items, err := store.Find(q); err != nil {
 			panic(fmt.Sprint(err.Error(), err.Description))
 		} else {
-			fmt.Printf("%#v", items)
+			for n, attrs := range items {
+				fmt.Printf("sess #%d\n", n)
+				fmt.Println("got user id", UserId.From(attrs))
+				fmt.Println("got user agent", UserAgent.From(attrs))
+				fmt.Println("got ip addr", IpAddr.From(attrs))
+			}
+		}
+	}
+	// query against global secondary index
+	{
+		userId := "uid:1"
+		q := UserIndex.Where(UserId.Equals(userId))
+		if items, err := store.Find(q); err != nil {
+			panic(fmt.Sprint(err.Error(), err.Description))
+		} else {
+			for n, attrs := range items {
+				fmt.Printf("sess #%d\n", n)
+				fmt.Println("got user id", UserId.From(attrs))
+				fmt.Println("got user agent", UserAgent.From(attrs))
+				fmt.Println("got ip addr", IpAddr.From(attrs))
+			}
 		}
 	}
 	// try to get model
 	{
 		sid := "sid:1"
-		if attrs, err := store.Get(sid); err != nil {
+		pk := PKIndex.Key(Id.Is(sid))
+		if attrs, err := store.Get(pk); err != nil {
 			panic(err.Error())
 		} else {
 			fmt.Println("got user id", UserId.From(attrs))
@@ -112,7 +146,8 @@ func main() {
 	// try to delete model
 	{
 		sid := "sid:1"
-		if err := store.Delete(sid); err != nil {
+		pk := PKIndex.Key(Id.Is(sid))
+		if err := store.Delete(pk); err != nil {
 			panic(err.Error())
 		}
 	}
