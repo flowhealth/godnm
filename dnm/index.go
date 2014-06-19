@@ -11,7 +11,7 @@ type iKeySchema interface {
 }
 
 type IKeyFactory interface {
-	Key(dynamodb.Attribute, ...dynamodb.Attribute) *dynamodb.Key
+	Key(dynamodb.Attribute, ...dynamodb.Attribute) dynamodb.Key
 }
 
 /////
@@ -85,7 +85,7 @@ func (self *tIndex) Factory() IKeyFactory {
 	return self
 }
 
-func (self *tIndex) Key(hash dynamodb.Attribute, maybeRange ...dynamodb.Attribute) *dynamodb.Key {
+func (self *tIndex) Key(hash dynamodb.Attribute, maybeRange ...dynamodb.Attribute) dynamodb.Key {
 	expectedName := self.attrNameByKeyType(KeyHash)
 	if expectedName != hash.Name {
 		panic(fmt.Sprintf("Illegal key, hash key attribute name is incorrect, expected: %s, got %s", expectedName, hash.Name))
@@ -95,7 +95,7 @@ func (self *tIndex) Key(hash dynamodb.Attribute, maybeRange ...dynamodb.Attribut
 			rang := maybeRange[1]
 			expectedName := self.attrNameByKeyType(KeyRange)
 			if expectedName == rang.Name {
-				return &dynamodb.Key{HashKey: hash.Value, RangeKey: rang.Value}
+				return dynamodb.Key{HashKey: hash.Value, RangeKey: rang.Value}
 			} else {
 				panic(fmt.Sprintf("Illegal key, range key attribute name is incorrect, expected: %s, got %s", expectedName, rang.Name))
 			}
@@ -108,6 +108,6 @@ func (self *tIndex) Key(hash dynamodb.Attribute, maybeRange ...dynamodb.Attribut
 		if self.hasRangeKey() {
 			panic("Illegal key, range is required but want specified")
 		}
-		return &dynamodb.Key{HashKey: hash.Value}
+		return dynamodb.Key{HashKey: hash.Value}
 	}
 }

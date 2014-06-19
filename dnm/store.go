@@ -195,15 +195,15 @@ func (self *TStore) Find(query *dynamodb.Query) ([]map[string]*dynamodb.Attribut
 
 func (self *TStore) Get(key *dynamodb.Key) (map[string]*dynamodb.Attribute, *TError) {
 	glog.V(5).Infof("Getting item with pk: %s", key)
-	attrMap, _err := self.table.GetItem(key)
-	if _err == nil {
-		glog.V(5).Infof("Succeed item %s fetch, got: %v", key, attrMap)
-	} else {
-		if _err == dynamodb.ErrNotFound {
+	if attrMap, err := self.table.GetItem(key); err != nil {
+		if err == dynamodb.ErrNotFound {
 			return nil, NotFoundErr
 		} else {
+			glog.Errorf("Failed to lookup an item with key %#v, because:%s", key, err.Error())
 			return nil, LookupErr
 		}
+	} else {
+		glog.V(5).Infof("Succeed item %s fetch, got: %v", key, attrMap)
+		return attrMap, nil
 	}
-	return attrMap, nil
 }

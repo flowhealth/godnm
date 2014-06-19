@@ -41,6 +41,9 @@ func (self *tAttr) Is(vals ...string) dynamodb.Attribute {
 		}
 	} else {
 		if len(vals) == 1 {
+			if vals[0] == "" {
+				panic("Invalid empty value is not allowed")
+			}
 			return dynamodb.Attribute{
 				Type: self.def.Type,
 				Name: self.def.Name, Value: vals[0],
