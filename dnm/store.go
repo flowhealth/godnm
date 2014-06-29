@@ -42,7 +42,7 @@ type TStore struct {
 
 type TStoreConfig struct {
 	Auth                         aws.Auth
-Region                       aws.Region
+	Region                       aws.Region
 	TableCreateCheckTimeout      string
 	TableCreateCheckPollInterval string
 }
@@ -58,7 +58,7 @@ func MakeStoreConfig(auth aws.Auth, region aws.Region, tableCreateTimeout, table
 func MakeStore(tableDesc *dynamodb.TableDescriptionT, cfg *TStoreConfig) IStore {
 	var (
 		auth aws.Auth = cfg.Auth
-	pk   dynamodb.PrimaryKey
+		pk   dynamodb.PrimaryKey
 	)
 	contract.RequireNoErrors(
 		func() (err error) {
