@@ -28,6 +28,7 @@ type IStore interface {
 	Get(key *dynamodb.Key) (map[string]*dynamodb.Attribute, *TError)
 	Find(query *dynamodb.Query) ([]map[string]*dynamodb.Attribute, *TError)
 	Save(...dynamodb.Attribute) *TError
+	Update(key *dynamodb.Key, attrs...dynamodb.Attribute) *TError
 	Delete(key *dynamodb.Key) *TError
 	Init() *TError
 	Destroy() *TError
@@ -183,6 +184,17 @@ func (self *TStore) Save(attrs ...dynamodb.Attribute) *TError {
 		return nil
 	}
 }
+
+
+func (self *TStore) Update(key *dynamodb.Key, attrs ...dynamodb.Attribute) *TError {
+	if _, err := self.table.UpdateAttributes(key, attrs); err != nil {
+		glog.Errorf("Failed update item: %v, with attributes %v", key, attrs)
+		return UpdateErr
+	} else {
+		return nil
+	}
+}
+
 
 func (self *TStore) Find(query *dynamodb.Query) ([]map[string]*dynamodb.Attribute, *TError) {
 	if items, err := self.table.RunQuery(query); err != nil {
