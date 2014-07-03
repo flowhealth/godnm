@@ -28,8 +28,11 @@ type IStore interface {
 	Get(key *dynamodb.Key) (map[string]*dynamodb.Attribute, *TError)
 	Find(query *dynamodb.Query) ([]map[string]*dynamodb.Attribute, *TError)
 	Save(...dynamodb.Attribute) *TError
+	SaveConditional(attrs []dynamodb.Attribute, expected []dynamodb.Attribute) *TError
 	Update(key *dynamodb.Key, attrs...dynamodb.Attribute) *TError
+	UpdateConditional(key *dynamodb.Key, attrs []dynamodb.Attribute, expected []dynamodb.Attribute) *TError
 	Delete(key *dynamodb.Key) *TError
+	DeleteConditional(key *dynamodb.Key, expected []dynamodb.Attribute) *TError
 	Init() *TError
 	Destroy() *TError
 }
@@ -163,8 +166,12 @@ func (self *TStore) Destroy() *TError {
 }
 
 func (self *TStore) Delete(key *dynamodb.Key) *TError {
+	return self.DeleteConditional(key, nil)
+}
+
+func (self *TStore) DeleteConditional(key *dynamodb.Key, expected []dynamodb.Attribute) *TError {
 	glog.V(5).Infof("Deleting item with key : %s", key)
-	ok, err := self.table.DeleteItem(key)
+	ok, err := self.table.ConditionalDeleteItem(key, expected)
 	if ok {
 		glog.V(5).Infof("Succeed delete item : %s", key)
 		return nil
@@ -175,8 +182,16 @@ func (self *TStore) Delete(key *dynamodb.Key) *TError {
 }
 
 func (self *TStore) Save(attrs ...dynamodb.Attribute) *TError {
+	return self.SaveConditional(attrs, nil)
+}
+
+
+func (self *TStore) SaveConditional(attrs []dynamodb.Attribute, expected []dynamodb.Attribute) *TError {
 	query := dynamodb.NewQuery(self.table)
 	query.AddItem(attrs)
+	if expected != nil {
+		query.AddExpected(expected)
+	}
 	if _, err := self.table.RunPutItemQuery(query); err != nil {
 		glog.Errorf("Failed save query: %s", query.String())
 		return SaveErr
@@ -187,8 +202,13 @@ func (self *TStore) Save(attrs ...dynamodb.Attribute) *TError {
 
 
 func (self *TStore) Update(key *dynamodb.Key, attrs ...dynamodb.Attribute) *TError {
-	if _, err := self.table.UpdateAttributes(key, attrs); err != nil {
-		glog.Errorf("Failed update item: %v, with attributes %v", key, attrs)
+	return self.UpdateConditional(key, attrs, nil)
+}
+
+
+func (self *TStore) UpdateConditional(key *dynamodb.Key, attrs []dynamodb.Attribute, expected []dynamodb.Attribute) *TError {
+	if _, err := self.table.ConditionalUpdateAttributes(key, attrs, expected); err != nil {
+		glog.Errorf("Failed update item: %v, with attributes %v, error: %v", key, attrs, err)
 		return UpdateErr
 	} else {
 		return nil
