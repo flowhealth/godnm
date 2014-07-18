@@ -92,7 +92,7 @@ func (self *tIndex) Key(hash dynamodb.Attribute, maybeRange ...dynamodb.Attribut
 	}
 	if len(maybeRange) == 1 {
 		if self.hasRangeKey() {
-			rang := maybeRange[1]
+			rang := maybeRange[0]
 			expectedName := self.attrNameByKeyType(KeyRange)
 			if expectedName == rang.Name {
 				return dynamodb.Key{HashKey: hash.Value, RangeKey: rang.Value}
