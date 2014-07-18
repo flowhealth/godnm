@@ -28,7 +28,11 @@ type IStore interface {
 	Get(key *dynamodb.Key) (map[string]*dynamodb.Attribute, *TError)
 	Find(query *dynamodb.Query) ([]map[string]*dynamodb.Attribute, *TError)
 	Save(...dynamodb.Attribute) *TError
+	SaveConditional(attrs []dynamodb.Attribute, expected []dynamodb.Attribute) *TError
+	Update(key *dynamodb.Key, attrs...dynamodb.Attribute) *TError
+	UpdateConditional(key *dynamodb.Key, attrs []dynamodb.Attribute, expected []dynamodb.Attribute) *TError
 	Delete(key *dynamodb.Key) *TError
+	DeleteConditional(key *dynamodb.Key, expected []dynamodb.Attribute) *TError
 	Init() *TError
 	Destroy() *TError
 }
@@ -41,22 +45,23 @@ type TStore struct {
 }
 
 type TStoreConfig struct {
+	Auth                         aws.Auth
 	Region                       aws.Region
 	TableCreateCheckTimeout      string
 	TableCreateCheckPollInterval string
 }
 
 func MakeDefaultStoreConfig() *TStoreConfig {
-	return MakeStoreConfig(DefaultRegion, DefaultTableCreateCheckTimeout, DefaultTableCreateCheckPollInterval)
+	return MakeStoreConfig(aws.Auth{}, DefaultRegion, DefaultTableCreateCheckTimeout, DefaultTableCreateCheckPollInterval)
 }
 
-func MakeStoreConfig(region aws.Region, tableCreateTimeout, tableCreatePoll string) *TStoreConfig {
-	return &TStoreConfig{region, tableCreateTimeout, tableCreatePoll}
+func MakeStoreConfig(auth aws.Auth, region aws.Region, tableCreateTimeout, tableCreatePoll string) *TStoreConfig {
+	return &TStoreConfig{auth, region, tableCreateTimeout, tableCreatePoll}
 }
 
 func MakeStore(tableDesc *dynamodb.TableDescriptionT, cfg *TStoreConfig) IStore {
 	var (
-		auth aws.Auth
+		auth aws.Auth = cfg.Auth
 		pk   dynamodb.PrimaryKey
 	)
 	contract.RequireNoErrors(
@@ -161,8 +166,12 @@ func (self *TStore) Destroy() *TError {
 }
 
 func (self *TStore) Delete(key *dynamodb.Key) *TError {
+	return self.DeleteConditional(key, nil)
+}
+
+func (self *TStore) DeleteConditional(key *dynamodb.Key, expected []dynamodb.Attribute) *TError {
 	glog.V(5).Infof("Deleting item with key : %s", key)
-	ok, err := self.table.DeleteItem(key)
+	ok, err := self.table.ConditionalDeleteItem(key, expected)
 	if ok {
 		glog.V(5).Infof("Succeed delete item : %s", key)
 		return nil
@@ -173,8 +182,16 @@ func (self *TStore) Delete(key *dynamodb.Key) *TError {
 }
 
 func (self *TStore) Save(attrs ...dynamodb.Attribute) *TError {
+	return self.SaveConditional(attrs, nil)
+}
+
+
+func (self *TStore) SaveConditional(attrs []dynamodb.Attribute, expected []dynamodb.Attribute) *TError {
 	query := dynamodb.NewQuery(self.table)
 	query.AddItem(attrs)
+	if expected != nil {
+		query.AddExpected(expected)
+	}
 	if _, err := self.table.RunPutItemQuery(query); err != nil {
 		glog.Errorf("Failed save query: %s", query.String())
 		return SaveErr
@@ -182,6 +199,22 @@ func (self *TStore) Save(attrs ...dynamodb.Attribute) *TError {
 		return nil
 	}
 }
+
+
+func (self *TStore) Update(key *dynamodb.Key, attrs ...dynamodb.Attribute) *TError {
+	return self.UpdateConditional(key, attrs, nil)
+}
+
+
+func (self *TStore) UpdateConditional(key *dynamodb.Key, attrs []dynamodb.Attribute, expected []dynamodb.Attribute) *TError {
+	if _, err := self.table.ConditionalUpdateAttributes(key, attrs, expected); err != nil {
+		glog.Errorf("Failed update item: %v, with attributes %v, error: %v", key, attrs, err)
+		return UpdateErr
+	} else {
+		return nil
+	}
+}
+
 
 func (self *TStore) Find(query *dynamodb.Query) ([]map[string]*dynamodb.Attribute, *TError) {
 	if items, err := self.table.RunQuery(query); err != nil {
