@@ -1,8 +1,8 @@
 image: flowhealth/go_buildtools:1.3
 script:
   - gpm 
-  - go build github.com/flowhealth/godnm/dnm/examples 
   - go build github.com/flowhealth/godnm/dnm
+  - go build github.com/flowhealth/godnm/examples
 notify:
   email:
     recipients:
