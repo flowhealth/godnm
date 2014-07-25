@@ -79,7 +79,6 @@ func MakeStore(tableDesc *dynamodb.TableDescriptionT, cfg *TStoreConfig) IStore 
 	dynamo := dynamodb.Server{auth, cfg.Region}
 	table := dynamo.NewTable(tableDesc.TableName, pk)
 	repo := &TStore{&dynamo, table, tableDesc, cfg}
-	repo.Init()
 	return repo
 }
 
