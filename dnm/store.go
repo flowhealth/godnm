@@ -32,7 +32,7 @@ type IStore interface {
 	Find(query *dynamodb.Query) ([]map[string]*dynamodb.Attribute, *TError)
 	Save(...dynamodb.Attribute) *TError
 	SaveConditional(attrs []dynamodb.Attribute, expected []dynamodb.Attribute) *TError
-	Update(key *dynamodb.Key, attrs ...dynamodb.Attribute) *TError
+	Update(key *dynamodb.Key, attrs...dynamodb.Attribute) *TError
 	UpdateConditional(key *dynamodb.Key, attrs []dynamodb.Attribute, expected []dynamodb.Attribute) *TError
 	Delete(key *dynamodb.Key) *TError
 	DeleteConditional(key *dynamodb.Key, expected []dynamodb.Attribute) *TError
