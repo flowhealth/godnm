@@ -192,7 +192,7 @@ func (self *TStore) SaveConditional(attrs []dynamodb.Attribute, expected []dynam
 		query.AddExpected(expected)
 	}
 	if _, err := self.table.RunPutItemQuery(query); err != nil {
-		glog.Errorf("Failed save query: %s", query.String())
+		glog.Errorf("Failed save query: %s, got err:%s", query.String(), err.Error())
 		return SaveErr
 	} else {
 		return nil
