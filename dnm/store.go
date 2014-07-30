@@ -33,6 +33,7 @@ type IStore interface {
 	UpdateConditional(key *dynamodb.Key, attrs []dynamodb.Attribute, expected []dynamodb.Attribute) *TError
 	Delete(key *dynamodb.Key) *TError
 	DeleteConditional(key *dynamodb.Key, expected []dynamodb.Attribute) *TError
+	ParallelScanPartialLimit([]dynamodb.AttributeComparison, *dynamodb.Key, int, int, int64) ([]map[string]*dynamodb.Attribute, *dynamodb.Key, *TError)
 	Init() *TError
 	Destroy() *TError
 }
@@ -237,5 +238,25 @@ func (self *TStore) Get(key *dynamodb.Key) (map[string]*dynamodb.Attribute, *TEr
 	} else {
 		glog.V(5).Infof("Succeed item %s fetch, got: %v", key, attrMap)
 		return attrMap, nil
+	}
+}
+
+
+
+func (self *TStore) ParallelScanPartialLimit(attributeComparisons []dynamodb.AttributeComparison, exclusiveStartKey *dynamodb.Key,
+	segment, totalSegments int, limit int64) ([]map[string]*dynamodb.Attribute, *dynamodb.Key, *TError) {
+
+	if attrMap, key, err := self.table.ParallelScanPartialLimit(attributeComparisons, exclusiveStartKey,
+		segment, totalSegments, limit); err != nil {
+
+		if err == dynamodb.ErrNotFound {
+			return nil, nil, NotFoundErr
+		} else {
+			glog.Errorf("Failed to scan because:%s", err.Error())
+			return nil, nil, MakeError(LookupErr.Summary, err.Error())
+		}
+	} else {
+		glog.V(5).Infof("Succeed item %s fetch, got: %v", key, attrMap)
+		return attrMap, key, nil
 	}
 }
