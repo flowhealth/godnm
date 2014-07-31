@@ -110,7 +110,7 @@ func (self *TStore) Init() *TError {
 		status, err := self.dynamoServer.CreateTable(*self.tableDesc)
 		if err != nil {
 			glog.Fatalf("Unexpected error: %s during dnm.StoreStore table intialization, cannot proceed", err.Error())
-			return MakeError(InitGeneralErr.Summary, err.Error())
+			return self.makeError(InitGeneralErr, err)
 		}
 		if status == TableStatusCreating {
 			glog.V(3).Infof("Waiting until dnm.StoreStore table '%s' becomes active", tableName)
@@ -158,7 +158,7 @@ func (self *TStore) Destroy() *TError {
 		_, err := self.dynamoServer.DeleteTable(*self.tableDesc)
 		if err != nil {
 			glog.Fatal(err)
-			return MakeError(DestroyGeneralErr.Summary, err.Error())
+			return self.makeError(DestroyGeneralErr, err)
 		}
 		glog.Infof("Table %s deleted successfully", self.tableDesc.TableName)
 	}
@@ -177,7 +177,7 @@ func (self *TStore) DeleteConditional(key *dynamodb.Key, expected []dynamodb.Att
 		return nil
 	} else {
 		glog.Errorf("Failed to delete item : %s, because of:%s", key, err.Error())
-		return MakeError(DeleteErr.Summary, err.Error())
+		return self.makeError(DeleteErr, err)
 	}
 }
 
@@ -193,7 +193,7 @@ func (self *TStore) SaveConditional(attrs []dynamodb.Attribute, expected []dynam
 	}
 	if _, err := self.table.RunPutItemQuery(query); err != nil {
 		glog.Errorf("Failed save query: %s, got err:%s", query.String(), err.Error())
-		return MakeError(SaveErr.Summary, err.Error())
+		return self.makeError(SaveErr, err)
 	} else {
 		return nil
 	}
@@ -206,7 +206,7 @@ func (self *TStore) Update(key *dynamodb.Key, attrs ...dynamodb.Attribute) *TErr
 func (self *TStore) UpdateConditional(key *dynamodb.Key, attrs []dynamodb.Attribute, expected []dynamodb.Attribute) *TError {
 	if _, err := self.table.ConditionalUpdateAttributes(key, attrs, expected); err != nil {
 		glog.Errorf("Failed update item: %v, with attributes %v, error: %v", key, attrs, err)
-		return MakeError(UpdateErr.Summary, err.Error())
+		return self.makeError(UpdateErr, err)
 	} else {
 		return nil
 	}
@@ -215,7 +215,7 @@ func (self *TStore) UpdateConditional(key *dynamodb.Key, attrs []dynamodb.Attrib
 func (self *TStore) Find(query *dynamodb.Query) ([]map[string]*dynamodb.Attribute, *TError) {
 	if items, err := self.table.RunQuery(query); err != nil {
 		glog.Errorf("Failed query: %s", query.String())
-		return nil, MakeError(LookupErr.Summary, err.Error())
+		return nil, self.makeError(LookupErr, err)
 	} else {
 		glog.V(5).Infof("Succeed item %#v fetch, got: %v", query, items)
 		return items, nil
@@ -229,7 +229,7 @@ func (self *TStore) Get(key *dynamodb.Key) (map[string]*dynamodb.Attribute, *TEr
 			return nil, NotFoundErr
 		} else {
 			glog.Errorf("Failed to lookup an item with key %#v, because:%s", key, err.Error())
-			return nil, MakeError(LookupErr.Summary, err.Error())
+			return nil, self.makeError(LookupErr, err)
 		}
 	} else {
 		glog.V(5).Infof("Succeed item %s fetch, got: %v", key, attrMap)
@@ -247,10 +247,14 @@ func (self *TStore) ParallelScanPartialLimit(attributeComparisons []dynamodb.Att
 			return nil, nil, NotFoundErr
 		} else {
 			glog.Errorf("Failed to scan because:%s", err.Error())
-			return nil, nil, MakeError(LookupErr.Summary, err.Error())
+			return nil, nil, self.makeError(LookupErr, err)
 		}
 	} else {
 		glog.V(5).Infof("Succeed item %s fetch, got: %v", key, attrMap)
 		return attrMap, key, nil
 	}
+}
+
+func (self *TStore) makeError(tErr *TError, details error) *TError {
+	return MakeError(tErr.Summary, fmt.Sprintf("table: %s, err: %s, desc: %s", self.table.Name, details.Error(), tErr.Description))
 }
