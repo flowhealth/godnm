@@ -10,6 +10,7 @@ import (
 	"github.com/flowhealth/goamz/dynamodb"
 	"github.com/flowhealth/goannoying"
 	"github.com/flowhealth/gocontract/contract"
+	"time"
 )
 
 const (
@@ -113,7 +114,7 @@ func (self *TStore) Init() *TError {
 		status, err := self.dynamoServer.CreateTable(*self.tableDesc)
 		if err != nil {
 			glog.Fatalf("Unexpected error: %s during dnm.StoreStore table intialization, cannot proceed", err.Error())
-			return InitGeneralErr
+			return MakeError(InitGeneralErr.Summary, err.Error())
 		}
 		if status == TableStatusCreating {
 			glog.V(3).Infof("Waiting until dnm.StoreStore table '%s' becomes active", tableName)
@@ -161,7 +162,7 @@ func (self *TStore) Destroy() *TError {
 		_, err := self.dynamoServer.DeleteTable(*self.tableDesc)
 		if err != nil {
 			glog.Fatal(err)
-			return DestroyGeneralErr
+			return MakeError(DestroyGeneralErr.Summary, err.Error())
 		}
 		glog.Infof("Table %s deleted successfully", self.tableDesc.TableName)
 	}
@@ -244,15 +245,13 @@ func (self *TStore) Get(key *dynamodb.Key) (map[string]*dynamodb.Attribute, *TEr
 			return nil, NotFoundErr
 		} else {
 			glog.Errorf("Failed to lookup an item with key %#v, because:%s", key, err.Error())
-			return nil, LookupErr
+			return nil, MakeError(LookupErr.Summary, err.Error())
 		}
 	} else {
 		glog.V(5).Infof("Succeed item %s fetch, got: %v", key, attrMap)
 		return attrMap, nil
 	}
 }
-
-
 
 func (self *TStore) ParallelScanPartialLimit(attributeComparisons []dynamodb.AttributeComparison, exclusiveStartKey *dynamodb.Key,
 	segment, totalSegments int, limit int64) ([]map[string]*dynamodb.Attribute, *dynamodb.Key, *TError) {
