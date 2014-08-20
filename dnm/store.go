@@ -2,12 +2,14 @@ package dnm
 
 import (
 	"fmt"
+	"strings"
+	"time"
+
 	"github.com/flowhealth/glog"
 	"github.com/flowhealth/goamz/aws"
 	"github.com/flowhealth/goamz/dynamodb"
 	"github.com/flowhealth/goannoying"
 	"github.com/flowhealth/gocontract/contract"
-	"time"
 )
 
 const (
@@ -18,6 +20,7 @@ const (
 	DefaultReadCapacity                 = 1
 	DefaultWriteCapacity                = 1
 	ActionAttributeUpdate               = "PUT"
+	ConditionalDynamoError              = "ConditionalCheckFailedException"
 )
 
 var (
@@ -29,7 +32,7 @@ type IStore interface {
 	Find(query *dynamodb.Query) ([]map[string]*dynamodb.Attribute, *TError)
 	Save(...dynamodb.Attribute) *TError
 	SaveConditional(attrs []dynamodb.Attribute, expected []dynamodb.Attribute) *TError
-	Update(key *dynamodb.Key, attrs...dynamodb.Attribute) *TError
+	Update(key *dynamodb.Key, attrs ...dynamodb.Attribute) *TError
 	UpdateConditional(key *dynamodb.Key, attrs []dynamodb.Attribute, expected []dynamodb.Attribute) *TError
 	Delete(key *dynamodb.Key) *TError
 	DeleteConditional(key *dynamodb.Key, expected []dynamodb.Attribute) *TError
@@ -176,7 +179,11 @@ func (self *TStore) DeleteConditional(key *dynamodb.Key, expected []dynamodb.Att
 		glog.V(5).Infof("Succeed delete item : %s", key)
 		return nil
 	} else {
-		glog.Errorf("Failed to delete item : %s, because of:%s", key, err.Error())
+		if strings.HasPrefix(err.Error(), ConditionalDynamoError) {
+			return ConditionalErr
+		} else {
+			glog.Errorf("Failed to delete item : %s, because of:%s", key, err.Error())
+		}
 		return DeleteErr
 	}
 }
@@ -185,7 +192,6 @@ func (self *TStore) Save(attrs ...dynamodb.Attribute) *TError {
 	return self.SaveConditional(attrs, nil)
 }
 
-
 func (self *TStore) SaveConditional(attrs []dynamodb.Attribute, expected []dynamodb.Attribute) *TError {
 	query := dynamodb.NewQuery(self.table)
 	query.AddItem(attrs)
@@ -193,28 +199,33 @@ func (self *TStore) SaveConditional(attrs []dynamodb.Attribute, expected []dynam
 		query.AddExpected(expected)
 	}
 	if _, err := self.table.RunPutItemQuery(query); err != nil {
-		glog.Errorf("Failed save query: %s", query.String())
-		return SaveErr
+		if strings.HasPrefix(err.Error(), ConditionalDynamoError) {
+			return ConditionalErr
+		} else {
+			glog.Errorf("Failed save query: %s", query.String())
+			return SaveErr
+		}
 	} else {
 		return nil
 	}
 }
-
 
 func (self *TStore) Update(key *dynamodb.Key, attrs ...dynamodb.Attribute) *TError {
 	return self.UpdateConditional(key, attrs, nil)
 }
 
-
 func (self *TStore) UpdateConditional(key *dynamodb.Key, attrs []dynamodb.Attribute, expected []dynamodb.Attribute) *TError {
 	if _, err := self.table.ConditionalUpdateAttributes(key, attrs, expected); err != nil {
-		glog.Errorf("Failed update item: %v, with attributes %v, error: %v", key, attrs, err)
-		return UpdateErr
+		if strings.HasPrefix(err.Error(), ConditionalDynamoError) {
+			return ConditionalErr
+		} else {
+			glog.Errorf("Failed update item: %v, with attributes %v, error: %v", key, attrs, err)
+			return UpdateErr
+		}
 	} else {
 		return nil
 	}
 }
-
 
 func (self *TStore) Find(query *dynamodb.Query) ([]map[string]*dynamodb.Attribute, *TError) {
 	if items, err := self.table.RunQuery(query); err != nil {

@@ -20,6 +20,7 @@ var (
 	DestroyGeneralErr    = MakeError("Failed to destroy table", "...")
 	InitUnknownStatusErr = MakeError("Failed to initialize table", "DynamoDB has returned table status that is unknown")
 	DeleteErr            = MakeError("Failed to delete record", "...")
+	ConditionalErr       = MakeError("Failed to perform request because of conditonal constraint violation", "...")
 	SaveErr              = MakeError("Failed to save record", "...")
 	UpdateErr            = MakeError("Failed to update record", "...")
 	UpdateCollectionErr  = MakeError("Failed to update collection", "...")
