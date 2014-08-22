@@ -4,13 +4,11 @@ import (
 	"fmt"
 	"strings"
 	"time"
-
 	"github.com/flowhealth/glog"
 	"github.com/flowhealth/goamz/aws"
 	"github.com/flowhealth/goamz/dynamodb"
 	"github.com/flowhealth/goannoying"
 	"github.com/flowhealth/gocontract/contract"
-	"time"
 )
 
 const (
