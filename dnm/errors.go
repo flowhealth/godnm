@@ -8,7 +8,7 @@ type TError struct {
 }
 
 func (self *TError) Error() string {
-	return fmt.Sprintf("DynamoDB Err: %s", self.Summary)
+	return fmt.Sprintf("DynamoDB Err: %s, desc: %s", self.Summary, self.Description)
 }
 
 func MakeError(summary, description string) *TError {
