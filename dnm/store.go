@@ -181,7 +181,7 @@ func (self *TStore) DeleteConditional(key *dynamodb.Key, expected []dynamodb.Att
 		if strings.HasPrefix(err.Error(), ConditionalDynamoError) {
 			return ConditionalErr
 		} else {
-			glog.Errorf("Failed to delete item : %s, because of:%s", key, err.Error())
+			glog.Errorf("Failed to delete item: %s, error: %v", key, err)
 		}
 		return self.makeError(DeleteErr, err)
 	}
@@ -201,7 +201,7 @@ func (self *TStore) SaveConditional(attrs []dynamodb.Attribute, expected []dynam
 		if strings.HasPrefix(err.Error(), ConditionalDynamoError) {
 			return ConditionalErr
 		} else {
-			glog.Errorf("Failed save query: %s", query.String())
+			glog.Errorf("Failed save query: %s, error: %v", query.String(), err)
 			return self.makeError(SaveErr, err)
 		}
 	} else {
@@ -228,7 +228,7 @@ func (self *TStore) UpdateConditional(key *dynamodb.Key, attrs []dynamodb.Attrib
 
 func (self *TStore) Find(query *dynamodb.Query) ([]map[string]*dynamodb.Attribute, *TError) {
 	if items, err := self.table.RunQuery(query); err != nil {
-		glog.Errorf("Failed query: %s", query.String())
+		glog.Errorf("Failed query: %s, error: %v", query.String(), err)
 		return nil, self.makeError(LookupErr, err)
 	} else {
 		glog.V(5).Infof("Succeed item %#v fetch, got: %v", query, items)
@@ -242,7 +242,7 @@ func (self *TStore) Get(key *dynamodb.Key) (map[string]*dynamodb.Attribute, *TEr
 		if err == dynamodb.ErrNotFound {
 			return nil, NotFoundErr
 		} else {
-			glog.Errorf("Failed to lookup an item with key %#v, because:%s", key, err.Error())
+			glog.Errorf("Failed to lookup an item with key %#v, because: %v", key, err)
 			return nil, self.makeError(LookupErr, err)
 		}
 	} else {
@@ -260,7 +260,8 @@ func (self *TStore) ParallelScanPartialLimit(attributeComparisons []dynamodb.Att
 		if err == dynamodb.ErrNotFound {
 			return nil, nil, NotFoundErr
 		} else {
-			glog.Errorf("Failed to scan because:%s", err.Error())
+			glog.Errorf("Failed to scan, attributeComparisons: %v, exclusiveStartKey: %v, segment: %d, totalSegments: %d, limit: %d, err: %v",
+				attributeComparisons, exclusiveStartKey, segment, totalSegments, limit, err)
 			return nil, nil, self.makeError(LookupErr, err)
 		}
 	} else {
@@ -270,5 +271,5 @@ func (self *TStore) ParallelScanPartialLimit(attributeComparisons []dynamodb.Att
 }
 
 func (self *TStore) makeError(tErr *TError, details error) *TError {
-	return MakeError(tErr.Summary, fmt.Sprintf("table: %s, err: %s, desc: %s", self.table.Name, details.Error(), tErr.Description))
+	return MakeError(tErr.Summary, fmt.Sprintf("table: %s, err: %v, desc: %s", self.table.Name, details, tErr.Description))
 }
