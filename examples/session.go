@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+
 	"github.com/flowhealth/godnm/dnm"
 )
 
@@ -135,7 +136,7 @@ func main() {
 	{
 		sid := "sid:1"
 		pk := PKIndex.Key(Id.Is(sid))
-		if attrs, err := store.Get(pk); err != nil {
+		if attrs, err := store.Get(&pk); err != nil {
 			panic(err.Error())
 		} else {
 			fmt.Println("got user id", UserId.From(attrs))
@@ -147,7 +148,7 @@ func main() {
 	{
 		sid := "sid:1"
 		pk := PKIndex.Key(Id.Is(sid))
-		if err := store.Delete(pk); err != nil {
+		if err := store.Delete(&pk); err != nil {
 			panic(err.Error())
 		}
 	}
