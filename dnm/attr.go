@@ -1,6 +1,11 @@
 package dnm
 
-import "github.com/flowhealth/goamz/dynamodb"
+import (
+	"time"
+
+	"github.com/flowhealth/goamz/dynamodb"
+	"github.com/superduper/godnm/dnm"
+)
 
 type IIndex interface {
 	Where(...dynamodb.AttributeComparison) *dynamodb.Query
@@ -13,14 +18,14 @@ type IAttr interface {
 	From(map[string]*dynamodb.Attribute) string
 }
 type tAttr struct {
-	def *dynamodb.AttributeDefinitionT
+	def                   *dynamodb.AttributeDefinitionT
+	updateAttrTypeInTable func(string)
 }
 
 func (self *tAttr) From(attrMap map[string]*dynamodb.Attribute) string {
 	if val, ok := attrMap[self.def.Name]; ok {
 		return val.Value
 	} else {
-		panic("Unable to get attribute value")
 		return ""
 	}
 }
@@ -67,6 +72,280 @@ func (self *tAttr) NotEquals(val string) dynamodb.AttributeComparison {
 	}
 }
 
-func makeAttr(attr *dynamodb.AttributeDefinitionT) *tAttr {
-	return &tAttr{attr}
+func makeAttr(attr *dynamodb.AttributeDefinitionT, typeSetter func(string)) *tAttr {
+	return &tAttr{attr, typeSetter}
+}
+
+/*
+ bool attribute serialization/deserialization
+*/
+
+// convenience method
+
+func (self *tAttr) AsBool() tBoolAttr {
+	self.def.Type = dnm.Number
+	self.updateAttrTypeInTable(dnm.Number)
+	return tBoolAttr{*self}
+}
+
+// serializer
+
+type tBoolAttr struct {
+	tAttr
+}
+
+func (self *tBoolAttr) Is(val bool) dynamodb.Attribute {
+	return self.tAttr.Is(FromBool(val))
+}
+
+func (self *tBoolAttr) From(attrMap map[string]*dynamodb.Attribute) (bool, error) {
+	if val := self.tAttr.From(attrMap); val != "" {
+		return ToBool(self.def.Name, val)
+	} else {
+		return false, AttrNotFoundErr
+	}
+}
+
+/*
+ []byte attribute serialization/deserialization
+*/
+
+// convenience method
+
+func (self *tAttr) AsBinary() tBinaryAttr {
+	self.def.Type = Binary
+	self.updateAttrTypeInTable(Binary)
+	return tBinaryAttr{*self}
+}
+
+// serializer
+
+type tBinaryAttr struct {
+	tAttr
+}
+
+func (self *tBinaryAttr) Is(val []byte) dynamodb.Attribute {
+	return self.tAttr.Is(FromBinary(val))
+}
+
+func (self *tBinaryAttr) From(attrMap map[string]*dynamodb.Attribute) ([]byte, error) {
+	if val := self.tAttr.From(attrMap); val != "" {
+		return ToBinary(self.def.Name, val)
+	} else {
+		return nil, AttrNotFoundErr
+	}
+}
+
+/*
+ time.Time attribute serialization/deserialization
+*/
+
+// convenience method
+
+func (self *tAttr) AsTimeTime() tTimeTimeAttr {
+	self.def.Type = dnm.Number
+	self.updateAttrTypeInTable(dnm.Number)
+	return tTimeTimeAttr{*self}
+}
+
+// serializer
+
+type tTimeTimeAttr struct {
+	tAttr
+}
+
+func (self *tTimeTimeAttr) Is(val time.Time) dynamodb.Attribute {
+	return self.tAttr.Is(FromTimeTime(val))
+}
+
+func (self *tTimeTimeAttr) From(attrMap map[string]*dynamodb.Attribute) (*time.Time, error) {
+	if val := self.tAttr.From(attrMap); val != "" {
+		if t, e := ToTimeTime(self.def.Name, val); e != nil {
+			return nil, e
+		} else {
+			return &t, nil
+		}
+	} else {
+		return nil, AttrNotFoundErr
+	}
+}
+
+/*
+ string attribute serialization/deserialization
+*/
+
+// convenience method
+
+func (self *tAttr) AsString() tStringAttr {
+	self.def.Type = dnm.String
+	self.updateAttrTypeInTable(dnm.String)
+	return tStringAttr{*self}
+}
+
+// serializer
+
+type tStringAttr struct {
+	tAttr
+}
+
+func (self *tStringAttr) Is(val string) dynamodb.Attribute {
+	return self.tAttr.Is(FromString(val))
+}
+
+func (self *tStringAttr) From(attrMap map[string]*dynamodb.Attribute) (string, error) {
+	if val := self.tAttr.From(attrMap); val != "" {
+		return ToString(val), nil
+	} else {
+		return "", AttrNotFoundErr
+	}
+}
+
+/*
+ float32 attribute serialization/deserialization
+*/
+
+// convenience method
+
+func (self *tAttr) AsFloat32() tFloat32Attr {
+	self.def.Type = dnm.Number
+	self.updateAttrTypeInTable(dnm.Number)
+	return tFloat32Attr{*self}
+}
+
+// serializer
+
+type tFloat32Attr struct {
+	tAttr
+}
+
+func (self *tFloat32Attr) Is(val float32) dynamodb.Attribute {
+	return self.tAttr.Is(FromFloat32(val))
+}
+
+func (self *tFloat32Attr) From(attrMap map[string]*dynamodb.Attribute) (float32, error) {
+	if val := self.tAttr.From(attrMap); val != "" {
+		return ToFloat32(self.def.Name, val)
+	} else {
+		return 0, AttrNotFoundErr
+	}
+}
+
+/*
+ float64 attribute serialization/deserialization
+*/
+
+// convenience method
+
+func (self *tAttr) AsFloat64() tFloat64Attr {
+	self.def.Type = dnm.Number
+	self.updateAttrTypeInTable(dnm.Number)
+	return tFloat64Attr{*self}
+}
+
+// serializer
+
+type tFloat64Attr struct {
+	tAttr
+}
+
+func (self *tFloat64Attr) Is(val float64) dynamodb.Attribute {
+	return self.tAttr.Is(FromFloat64(val))
+}
+
+func (self *tFloat64Attr) From(attrMap map[string]*dynamodb.Attribute) (float64, error) {
+	if val := self.tAttr.From(attrMap); val != "" {
+		return ToFloat64(self.def.Name, val)
+	} else {
+		return 0, AttrNotFoundErr
+	}
+}
+
+/*
+ int attribute serialization/deserialization
+*/
+
+// convenience method
+
+func (self *tAttr) AsInt() tIntAttr {
+	self.def.Type = dnm.Number
+	self.updateAttrTypeInTable(dnm.Number)
+	return tIntAttr{*self}
+}
+
+// serializer
+
+type tIntAttr struct {
+	tAttr
+}
+
+func (self *tIntAttr) Is(val int) dynamodb.Attribute {
+	return self.tAttr.Is(FromInt(val))
+}
+
+func (self *tIntAttr) From(attrMap map[string]*dynamodb.Attribute) (int, error) {
+	if val := self.tAttr.From(attrMap); val != "" {
+		return ToInt(self.def.Name, val)
+	} else {
+		return 0, AttrNotFoundErr
+	}
+}
+
+/*
+ int32 attribute serialization/deserialization
+*/
+
+// convenience method
+
+func (self *tAttr) AsInt32() tInt32Attr {
+	self.def.Type = dnm.Number
+	self.updateAttrTypeInTable(dnm.Number)
+	return tInt32Attr{*self}
+}
+
+// serializer
+
+type tInt32Attr struct {
+	tAttr
+}
+
+func (self *tInt32Attr) Is(val int32) dynamodb.Attribute {
+	return self.tAttr.Is(FromInt32(val))
+}
+
+func (self *tInt32Attr) From(attrMap map[string]*dynamodb.Attribute) (int32, error) {
+	if val := self.tAttr.From(attrMap); val != "" {
+		return ToInt32(self.def.Name, val)
+	} else {
+		return 0, AttrNotFoundErr
+	}
+}
+
+/*
+ int64 attribute serialization/deserialization
+*/
+
+// convenience method
+
+func (self *tAttr) AsInt64() tInt64Attr {
+	self.def.Type = dnm.Number
+	self.updateAttrTypeInTable(dnm.Number)
+	return tInt64Attr{*self}
+}
+
+// serializer
+
+type tInt64Attr struct {
+	tAttr
+}
+
+func (self *tInt64Attr) Is(val int64) dynamodb.Attribute {
+	return self.tAttr.Is(FromInt64(val))
+}
+
+func (self *tInt64Attr) From(attrMap map[string]*dynamodb.Attribute) (int64, error) {
+	if val := self.tAttr.From(attrMap); val != "" {
+		return ToInt64(self.def.Name, val)
+	} else {
+		return 0, AttrNotFoundErr
+	}
 }

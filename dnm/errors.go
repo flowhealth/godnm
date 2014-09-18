@@ -17,6 +17,7 @@ func MakeError(summary, description string) *TError {
 
 var (
 	InitGeneralErr       = MakeError("Failed to initialize table", "...")
+	AttrNotFoundErr      = MakeError("Row attribute was not found", "...")
 	DestroyGeneralErr    = MakeError("Failed to destroy table", "...")
 	InitUnknownStatusErr = MakeError("Failed to initialize table", "DynamoDB has returned table status that is unknown")
 	DeleteErr            = MakeError("Failed to delete record", "...")

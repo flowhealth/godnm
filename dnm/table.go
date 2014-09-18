@@ -2,18 +2,20 @@ package dnm
 
 import (
 	"fmt"
+
 	"github.com/flowhealth/goamz/dynamodb"
 )
 
 func Describe(name string, definitions func(ITable)) dynamodb.TableDescriptionT {
 	table := makeTable(name)
 	definitions(table)
+
 	return table.TableDescriptionT
 }
 
 type ITable interface {
-	KeyAttr(name, typ string) *tAttr
-	NonKeyAttr(name, typ string) *tAttr
+	KeyAttr(name string, maybeTyp ...string) *tAttr
+	NonKeyAttr(name string, maybeTyp ...string) *tAttr
 	PrimaryKey() iPrimaryKey
 	GlobalIndex(name string) iGlobalIndex
 	LocalIndex(name string) iLocalIndex
@@ -50,25 +52,49 @@ func makeTable(name string) *tTable {
 	}, []string{}, name}
 }
 
-func (self *tTable) KeyAttr(name, typ string) *tAttr {
+func (self *tTable) KeyAttr(name string, maybeTyp ...string) *tAttr {
+	typ := maybeStrArg(maybeTyp).GetOr("")
 	if !self.tryClaimAttrName(name) {
 		panic(fmt.Sprintf("Incorrect table definition: duplicate attr name %s", name))
 	}
 	attr := dynamodb.AttributeDefinitionT{Name: name, Type: typ}
 	self.AttributeDefinitions = append(self.AttributeDefinitions, attr)
-	return makeAttr(&attr)
+	return makeAttr(&attr, self.attrTypeSetter(name))
 }
 
-func (self *tTable) NonKeyAttr(name, typ string) *tAttr {
+type maybeStrArg []string
+
+func (self maybeStrArg) GetOr(or string) string {
+	if len(self) == 1 {
+		return self[0]
+	} else if len(self) > 1 {
+		panic("Incorrect type declaration")
+	} else {
+		return or
+	}
+}
+
+func (self *tTable) NonKeyAttr(name string, maybeTyp ...string) *tAttr {
+	typ := maybeStrArg(maybeTyp).GetOr("")
 	if !self.tryClaimAttrName(name) {
 		panic(fmt.Sprintf("Incorrect table definition: duplicate attr name %s", name))
 	}
 	attr := dynamodb.AttributeDefinitionT{Name: name, Type: typ}
-	return makeAttr(&attr)
+	return makeAttr(&attr, func(v string) {})
 }
 
 func (self *tTable) PrimaryKey() iPrimaryKey {
 	return makePrimaryKey(self)
+}
+
+func (self *tTable) attrTypeSetter(name string) func(string) {
+	return func(newTyp string) {
+		for _, v := range self.AttributeDefinitions {
+			if v.Name == name {
+				v.Type = newTyp
+			}
+		}
+	}
 }
 
 func (self *tTable) tryClaimAttrName(name string) bool {
