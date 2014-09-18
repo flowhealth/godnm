@@ -4,7 +4,6 @@ import (
 	"time"
 
 	"github.com/flowhealth/goamz/dynamodb"
-	"github.com/superduper/godnm/dnm"
 )
 
 type IIndex interface {
@@ -83,8 +82,8 @@ func makeAttr(attr *dynamodb.AttributeDefinitionT, typeSetter func(string)) *tAt
 // convenience method
 
 func (self *tAttr) AsBool() tBoolAttr {
-	self.def.Type = dnm.Number
-	self.updateAttrTypeInTable(dnm.Number)
+	self.def.Type = Number
+	self.updateAttrTypeInTable(Number)
 	return tBoolAttr{*self}
 }
 
@@ -143,8 +142,8 @@ func (self *tBinaryAttr) From(attrMap map[string]*dynamodb.Attribute) ([]byte, e
 // convenience method
 
 func (self *tAttr) AsTimeTime() tTimeTimeAttr {
-	self.def.Type = dnm.Number
-	self.updateAttrTypeInTable(dnm.Number)
+	self.def.Type = Number
+	self.updateAttrTypeInTable(Number)
 	return tTimeTimeAttr{*self}
 }
 
@@ -177,8 +176,8 @@ func (self *tTimeTimeAttr) From(attrMap map[string]*dynamodb.Attribute) (*time.T
 // convenience method
 
 func (self *tAttr) AsString() tStringAttr {
-	self.def.Type = dnm.String
-	self.updateAttrTypeInTable(dnm.String)
+	self.def.Type = String
+	self.updateAttrTypeInTable(String)
 	return tStringAttr{*self}
 }
 
@@ -207,8 +206,8 @@ func (self *tStringAttr) From(attrMap map[string]*dynamodb.Attribute) (string, e
 // convenience method
 
 func (self *tAttr) AsFloat32() tFloat32Attr {
-	self.def.Type = dnm.Number
-	self.updateAttrTypeInTable(dnm.Number)
+	self.def.Type = Number
+	self.updateAttrTypeInTable(Number)
 	return tFloat32Attr{*self}
 }
 
@@ -237,8 +236,8 @@ func (self *tFloat32Attr) From(attrMap map[string]*dynamodb.Attribute) (float32,
 // convenience method
 
 func (self *tAttr) AsFloat64() tFloat64Attr {
-	self.def.Type = dnm.Number
-	self.updateAttrTypeInTable(dnm.Number)
+	self.def.Type = Number
+	self.updateAttrTypeInTable(Number)
 	return tFloat64Attr{*self}
 }
 
@@ -267,8 +266,8 @@ func (self *tFloat64Attr) From(attrMap map[string]*dynamodb.Attribute) (float64,
 // convenience method
 
 func (self *tAttr) AsInt() tIntAttr {
-	self.def.Type = dnm.Number
-	self.updateAttrTypeInTable(dnm.Number)
+	self.def.Type = Number
+	self.updateAttrTypeInTable(Number)
 	return tIntAttr{*self}
 }
 
@@ -297,8 +296,8 @@ func (self *tIntAttr) From(attrMap map[string]*dynamodb.Attribute) (int, error) 
 // convenience method
 
 func (self *tAttr) AsInt32() tInt32Attr {
-	self.def.Type = dnm.Number
-	self.updateAttrTypeInTable(dnm.Number)
+	self.def.Type = Number
+	self.updateAttrTypeInTable(Number)
 	return tInt32Attr{*self}
 }
 
@@ -327,8 +326,8 @@ func (self *tInt32Attr) From(attrMap map[string]*dynamodb.Attribute) (int32, err
 // convenience method
 
 func (self *tAttr) AsInt64() tInt64Attr {
-	self.def.Type = dnm.Number
-	self.updateAttrTypeInTable(dnm.Number)
+	self.def.Type = Number
+	self.updateAttrTypeInTable(Number)
 	return tInt64Attr{*self}
 }
 
