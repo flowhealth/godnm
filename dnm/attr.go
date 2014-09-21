@@ -16,13 +16,18 @@ type IAttr interface {
 	Def() *dynamodb.AttributeDefinitionT
 	From(map[string]*dynamodb.Attribute) string
 }
+
+type AttributeDefinitionProvider interface {
+	Def() *dynamodb.AttributeDefinitionT
+}
+
 type tAttr struct {
-	def                   *dynamodb.AttributeDefinitionT
+	*dynamodb.AttributeDefinitionT
 	updateAttrTypeInTable func(string)
 }
 
 func (self *tAttr) From(attrMap map[string]*dynamodb.Attribute) string {
-	if val, ok := attrMap[self.def.Name]; ok {
+	if val, ok := attrMap[self.Name]; ok {
 		return val.Value
 	} else {
 		return ""
@@ -30,18 +35,18 @@ func (self *tAttr) From(attrMap map[string]*dynamodb.Attribute) string {
 }
 
 func (self *tAttr) Def() *dynamodb.AttributeDefinitionT {
-	return self.def
+	return self.AttributeDefinitionT
 }
 
 func (self *tAttr) Is(vals ...string) dynamodb.Attribute {
-	isNumSet := (self.def.Type == dynamodb.TYPE_NUMBER_SET)
-	isBinSet := (self.def.Type == dynamodb.TYPE_BINARY_SET)
-	isStrSet := (self.def.Type == dynamodb.TYPE_STRING_SET)
+	isNumSet := (self.Type == dynamodb.TYPE_NUMBER_SET)
+	isBinSet := (self.Type == dynamodb.TYPE_BINARY_SET)
+	isStrSet := (self.Type == dynamodb.TYPE_STRING_SET)
 	isSet := isNumSet || isBinSet || isStrSet
 	if isSet {
 		return dynamodb.Attribute{
-			Type: self.def.Type,
-			Name: self.def.Name, SetValues: vals,
+			Type: self.Type,
+			Name: self.Name, SetValues: vals,
 		}
 	} else {
 		if len(vals) == 1 {
@@ -49,8 +54,8 @@ func (self *tAttr) Is(vals ...string) dynamodb.Attribute {
 				panic("Invalid empty value is not allowed")
 			}
 			return dynamodb.Attribute{
-				Type: self.def.Type,
-				Name: self.def.Name, Value: vals[0],
+				Type: self.Type,
+				Name: self.Name, Value: vals[0],
 			}
 		} else {
 			panic("Invalid set of values")
@@ -58,14 +63,14 @@ func (self *tAttr) Is(vals ...string) dynamodb.Attribute {
 	}
 }
 func (self *tAttr) Equals(val string) dynamodb.AttributeComparison {
-	return dynamodb.AttributeComparison{self.def.Name,
+	return dynamodb.AttributeComparison{self.Name,
 		dynamodb.COMPARISON_EQUAL,
 		[]dynamodb.Attribute{self.Is(val)},
 	}
 }
 
 func (self *tAttr) NotEquals(val string) dynamodb.AttributeComparison {
-	return dynamodb.AttributeComparison{self.def.Name,
+	return dynamodb.AttributeComparison{self.Name,
 		dynamodb.COMPARISON_NOT_EQUAL,
 		[]dynamodb.Attribute{self.Is(val)},
 	}
@@ -82,7 +87,7 @@ func makeAttr(attr *dynamodb.AttributeDefinitionT, typeSetter func(string)) *tAt
 // convenience method
 
 func (self *tAttr) AsBool() tBoolAttr {
-	self.def.Type = Number
+	self.Type = Number
 	self.updateAttrTypeInTable(Number)
 	return tBoolAttr{self}
 }
@@ -99,7 +104,7 @@ func (self *tBoolAttr) Is(val bool) dynamodb.Attribute {
 
 func (self *tBoolAttr) From(attrMap map[string]*dynamodb.Attribute) (bool, error) {
 	if val := self.tAttr.From(attrMap); val != "" {
-		return ToBool(self.def.Name, val)
+		return ToBool(self.Name, val)
 	} else {
 		return false, AttrNotFoundErr
 	}
@@ -112,7 +117,7 @@ func (self *tBoolAttr) From(attrMap map[string]*dynamodb.Attribute) (bool, error
 // convenience method
 
 func (self *tAttr) AsBinary() tBinaryAttr {
-	self.def.Type = Binary
+	self.Type = Binary
 	self.updateAttrTypeInTable(Binary)
 	return tBinaryAttr{self}
 }
@@ -129,7 +134,7 @@ func (self *tBinaryAttr) Is(val []byte) dynamodb.Attribute {
 
 func (self *tBinaryAttr) From(attrMap map[string]*dynamodb.Attribute) ([]byte, error) {
 	if val := self.tAttr.From(attrMap); val != "" {
-		return ToBinary(self.def.Name, val)
+		return ToBinary(self.Name, val)
 	} else {
 		return nil, AttrNotFoundErr
 	}
@@ -142,7 +147,7 @@ func (self *tBinaryAttr) From(attrMap map[string]*dynamodb.Attribute) ([]byte, e
 // convenience method
 
 func (self *tAttr) AsTimeTime() tTimeTimeAttr {
-	self.def.Type = Number
+	self.Type = Number
 	self.updateAttrTypeInTable(Number)
 	return tTimeTimeAttr{self}
 }
@@ -159,7 +164,7 @@ func (self *tTimeTimeAttr) Is(val time.Time) dynamodb.Attribute {
 
 func (self *tTimeTimeAttr) From(attrMap map[string]*dynamodb.Attribute) (*time.Time, error) {
 	if val := self.tAttr.From(attrMap); val != "" {
-		if t, e := ToTimeTime(self.def.Name, val); e != nil {
+		if t, e := ToTimeTime(self.Name, val); e != nil {
 			return nil, e
 		} else {
 			return &t, nil
@@ -176,7 +181,7 @@ func (self *tTimeTimeAttr) From(attrMap map[string]*dynamodb.Attribute) (*time.T
 // convenience method
 
 func (self *tAttr) AsString() tStringAttr {
-	self.def.Type = String
+	self.Type = String
 	self.updateAttrTypeInTable(String)
 	return tStringAttr{self}
 }
@@ -206,7 +211,7 @@ func (self *tStringAttr) From(attrMap map[string]*dynamodb.Attribute) (string, e
 // convenience method
 
 func (self *tAttr) AsFloat32() tFloat32Attr {
-	self.def.Type = Number
+	self.Type = Number
 	self.updateAttrTypeInTable(Number)
 	return tFloat32Attr{self}
 }
@@ -223,7 +228,7 @@ func (self *tFloat32Attr) Is(val float32) dynamodb.Attribute {
 
 func (self *tFloat32Attr) From(attrMap map[string]*dynamodb.Attribute) (float32, error) {
 	if val := self.tAttr.From(attrMap); val != "" {
-		return ToFloat32(self.def.Name, val)
+		return ToFloat32(self.Name, val)
 	} else {
 		return 0, AttrNotFoundErr
 	}
@@ -236,7 +241,7 @@ func (self *tFloat32Attr) From(attrMap map[string]*dynamodb.Attribute) (float32,
 // convenience method
 
 func (self *tAttr) AsFloat64() tFloat64Attr {
-	self.def.Type = Number
+	self.Type = Number
 	self.updateAttrTypeInTable(Number)
 	return tFloat64Attr{self}
 }
@@ -253,7 +258,7 @@ func (self *tFloat64Attr) Is(val float64) dynamodb.Attribute {
 
 func (self *tFloat64Attr) From(attrMap map[string]*dynamodb.Attribute) (float64, error) {
 	if val := self.tAttr.From(attrMap); val != "" {
-		return ToFloat64(self.def.Name, val)
+		return ToFloat64(self.Name, val)
 	} else {
 		return 0, AttrNotFoundErr
 	}
@@ -266,7 +271,7 @@ func (self *tFloat64Attr) From(attrMap map[string]*dynamodb.Attribute) (float64,
 // convenience method
 
 func (self *tAttr) AsInt() tIntAttr {
-	self.def.Type = Number
+	self.Type = Number
 	self.updateAttrTypeInTable(Number)
 	return tIntAttr{self}
 }
@@ -283,7 +288,7 @@ func (self *tIntAttr) Is(val int) dynamodb.Attribute {
 
 func (self *tIntAttr) From(attrMap map[string]*dynamodb.Attribute) (int, error) {
 	if val := self.tAttr.From(attrMap); val != "" {
-		return ToInt(self.def.Name, val)
+		return ToInt(self.Name, val)
 	} else {
 		return 0, AttrNotFoundErr
 	}
@@ -296,7 +301,7 @@ func (self *tIntAttr) From(attrMap map[string]*dynamodb.Attribute) (int, error) 
 // convenience method
 
 func (self *tAttr) AsInt32() tInt32Attr {
-	self.def.Type = Number
+	self.Type = Number
 	self.updateAttrTypeInTable(Number)
 	return tInt32Attr{self}
 }
@@ -313,7 +318,7 @@ func (self *tInt32Attr) Is(val int32) dynamodb.Attribute {
 
 func (self *tInt32Attr) From(attrMap map[string]*dynamodb.Attribute) (int32, error) {
 	if val := self.tAttr.From(attrMap); val != "" {
-		return ToInt32(self.def.Name, val)
+		return ToInt32(self.Name, val)
 	} else {
 		return 0, AttrNotFoundErr
 	}
@@ -326,7 +331,7 @@ func (self *tInt32Attr) From(attrMap map[string]*dynamodb.Attribute) (int32, err
 // convenience method
 
 func (self *tAttr) AsInt64() tInt64Attr {
-	self.def.Type = Number
+	self.Type = Number
 	self.updateAttrTypeInTable(Number)
 	return tInt64Attr{self}
 }
@@ -343,7 +348,7 @@ func (self *tInt64Attr) Is(val int64) dynamodb.Attribute {
 
 func (self *tInt64Attr) From(attrMap map[string]*dynamodb.Attribute) (int64, error) {
 	if val := self.tAttr.From(attrMap); val != "" {
-		return ToInt64(self.def.Name, val)
+		return ToInt64(self.Name, val)
 	} else {
 		return 0, AttrNotFoundErr
 	}

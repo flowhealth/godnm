@@ -2,6 +2,7 @@ package dnm
 
 import (
 	"fmt"
+
 	"github.com/flowhealth/goamz/dynamodb"
 )
 
@@ -66,11 +67,11 @@ func (self *tIndex) tryAddKey(typ string, attr *dynamodb.AttributeDefinitionT) {
 	self.keySchema.Append(k)
 }
 
-func (self *tIndex) Hash(attr IAttr) {
+func (self *tIndex) Hash(attr AttributeDefinitionProvider) {
 	self.tryAddKey(KeyHash, attr.Def())
 }
 
-func (self *tIndex) Range(attr IAttr) {
+func (self *tIndex) Range(attr AttributeDefinitionProvider) {
 	self.tryAddKey(KeyRange, attr.Def())
 }
 

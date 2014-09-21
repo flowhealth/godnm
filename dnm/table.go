@@ -23,16 +23,17 @@ type ITable interface {
 }
 
 type iGlobalIndex interface {
-	Hash(IAttr)
-	Range(IAttr)
 	ProvisionedThroughput() iProvisionedThroughput
-	Projection() iProjection
-	Where(conds ...dynamodb.AttributeComparison) *dynamodb.Query
+	SecondaryIndexProvider
 }
 
 type iLocalIndex interface {
-	Hash(IAttr)
-	Range(IAttr)
+	SecondaryIndexProvider
+}
+
+type SecondaryIndexProvider interface {
+	Hash(AttributeDefinitionProvider)
+	Range(AttributeDefinitionProvider)
 	Projection() iProjection
 	Where(conds ...dynamodb.AttributeComparison) *dynamodb.Query
 }

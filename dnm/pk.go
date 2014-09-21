@@ -3,8 +3,8 @@ package dnm
 import "github.com/flowhealth/goamz/dynamodb"
 
 type iPrimaryKey interface {
-	Hash(IAttr)
-	Range(IAttr)
+	Hash(AttributeDefinitionProvider)
+	Range(AttributeDefinitionProvider)
 	Factory() IKeyFactory
 }
 
