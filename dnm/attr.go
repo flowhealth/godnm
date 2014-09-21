@@ -84,13 +84,13 @@ func makeAttr(attr *dynamodb.AttributeDefinitionT, typeSetter func(string)) *tAt
 func (self *tAttr) AsBool() tBoolAttr {
 	self.def.Type = Number
 	self.updateAttrTypeInTable(Number)
-	return tBoolAttr{*self}
+	return tBoolAttr{self}
 }
 
 // serializer
 
 type tBoolAttr struct {
-	tAttr
+	*tAttr
 }
 
 func (self *tBoolAttr) Is(val bool) dynamodb.Attribute {
@@ -114,13 +114,13 @@ func (self *tBoolAttr) From(attrMap map[string]*dynamodb.Attribute) (bool, error
 func (self *tAttr) AsBinary() tBinaryAttr {
 	self.def.Type = Binary
 	self.updateAttrTypeInTable(Binary)
-	return tBinaryAttr{*self}
+	return tBinaryAttr{self}
 }
 
 // serializer
 
 type tBinaryAttr struct {
-	tAttr
+	*tAttr
 }
 
 func (self *tBinaryAttr) Is(val []byte) dynamodb.Attribute {
@@ -144,13 +144,13 @@ func (self *tBinaryAttr) From(attrMap map[string]*dynamodb.Attribute) ([]byte, e
 func (self *tAttr) AsTimeTime() tTimeTimeAttr {
 	self.def.Type = Number
 	self.updateAttrTypeInTable(Number)
-	return tTimeTimeAttr{*self}
+	return tTimeTimeAttr{self}
 }
 
 // serializer
 
 type tTimeTimeAttr struct {
-	tAttr
+	*tAttr
 }
 
 func (self *tTimeTimeAttr) Is(val time.Time) dynamodb.Attribute {
@@ -178,13 +178,13 @@ func (self *tTimeTimeAttr) From(attrMap map[string]*dynamodb.Attribute) (*time.T
 func (self *tAttr) AsString() tStringAttr {
 	self.def.Type = String
 	self.updateAttrTypeInTable(String)
-	return tStringAttr{*self}
+	return tStringAttr{self}
 }
 
 // serializer
 
 type tStringAttr struct {
-	tAttr
+	*tAttr
 }
 
 func (self *tStringAttr) Is(val string) dynamodb.Attribute {
@@ -208,13 +208,13 @@ func (self *tStringAttr) From(attrMap map[string]*dynamodb.Attribute) (string, e
 func (self *tAttr) AsFloat32() tFloat32Attr {
 	self.def.Type = Number
 	self.updateAttrTypeInTable(Number)
-	return tFloat32Attr{*self}
+	return tFloat32Attr{self}
 }
 
 // serializer
 
 type tFloat32Attr struct {
-	tAttr
+	*tAttr
 }
 
 func (self *tFloat32Attr) Is(val float32) dynamodb.Attribute {
@@ -238,13 +238,13 @@ func (self *tFloat32Attr) From(attrMap map[string]*dynamodb.Attribute) (float32,
 func (self *tAttr) AsFloat64() tFloat64Attr {
 	self.def.Type = Number
 	self.updateAttrTypeInTable(Number)
-	return tFloat64Attr{*self}
+	return tFloat64Attr{self}
 }
 
 // serializer
 
 type tFloat64Attr struct {
-	tAttr
+	*tAttr
 }
 
 func (self *tFloat64Attr) Is(val float64) dynamodb.Attribute {
@@ -268,13 +268,13 @@ func (self *tFloat64Attr) From(attrMap map[string]*dynamodb.Attribute) (float64,
 func (self *tAttr) AsInt() tIntAttr {
 	self.def.Type = Number
 	self.updateAttrTypeInTable(Number)
-	return tIntAttr{*self}
+	return tIntAttr{self}
 }
 
 // serializer
 
 type tIntAttr struct {
-	tAttr
+	*tAttr
 }
 
 func (self *tIntAttr) Is(val int) dynamodb.Attribute {
@@ -298,13 +298,13 @@ func (self *tIntAttr) From(attrMap map[string]*dynamodb.Attribute) (int, error) 
 func (self *tAttr) AsInt32() tInt32Attr {
 	self.def.Type = Number
 	self.updateAttrTypeInTable(Number)
-	return tInt32Attr{*self}
+	return tInt32Attr{self}
 }
 
 // serializer
 
 type tInt32Attr struct {
-	tAttr
+	*tAttr
 }
 
 func (self *tInt32Attr) Is(val int32) dynamodb.Attribute {
@@ -328,13 +328,13 @@ func (self *tInt32Attr) From(attrMap map[string]*dynamodb.Attribute) (int32, err
 func (self *tAttr) AsInt64() tInt64Attr {
 	self.def.Type = Number
 	self.updateAttrTypeInTable(Number)
-	return tInt64Attr{*self}
+	return tInt64Attr{self}
 }
 
 // serializer
 
 type tInt64Attr struct {
-	tAttr
+	*tAttr
 }
 
 func (self *tInt64Attr) Is(val int64) dynamodb.Attribute {
