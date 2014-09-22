@@ -31,11 +31,15 @@ type iLocalIndex interface {
 	SecondaryIndexProvider
 }
 
-type SecondaryIndexProvider interface {
+type IndexProvider interface {
 	Hash(AttributeDefinitionProvider)
 	Range(AttributeDefinitionProvider)
-	Projection() iProjection
 	Where(conds ...dynamodb.AttributeComparison) *dynamodb.Query
+}
+
+type SecondaryIndexProvider interface {
+	IndexProvider
+	Projection() iProjection
 }
 
 type tTable struct {

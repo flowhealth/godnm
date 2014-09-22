@@ -3,13 +3,12 @@ package dnm
 import "github.com/flowhealth/goamz/dynamodb"
 
 type iPrimaryKey interface {
-	Hash(AttributeDefinitionProvider)
-	Range(AttributeDefinitionProvider)
-	Factory() IKeyFactory
+	IndexProvider
+	Factory() IKeyFactory // compat with old interface
 }
 
 type tPrimaryKey struct {
-	tIndex
+	*tIndex
 }
 
 type TTableKeySchema struct {
@@ -29,5 +28,5 @@ func makeTableKeySchema(table *tTable) iKeySchema {
 }
 
 func makePrimaryKey(table *tTable) iPrimaryKey {
-	return &tPrimaryKey{tIndex{"PK_IGNORE", "PK_IGNORE", makeTableKeySchema(table)}}
+	return &tPrimaryKey{&tIndex{"", table.name, makeTableKeySchema(table)}}
 }

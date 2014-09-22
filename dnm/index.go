@@ -78,7 +78,10 @@ func (self *tIndex) Range(attr AttributeDefinitionProvider) {
 func (self *tIndex) Where(conds ...dynamodb.AttributeComparison) *dynamodb.Query {
 	q := dynamodb.NewQueryFor(self.tableName)
 	q.AddKeyConditions(conds)
-	q.AddIndex(self.name)
+	// index name can be empty if it's an index for a primary key
+	if self.name != "" {
+		q.AddIndex(self.name)
+	}
 	return q
 }
 
