@@ -14,8 +14,8 @@ import (
 const (
 	TableStatusActive                   = "ACTIVE"
 	TableStatusCreating                 = "CREATING"
-	DefaultTableCreateCheckTimeout      = "20s"
-	DefaultTableCreateCheckPollInterval = "3s"
+	DefaultTableCreateCheckTimeout      = "60s"
+	DefaultTableCreateCheckPollInterval = "5s"
 	DefaultReadCapacity                 = 1
 	DefaultWriteCapacity                = 1
 	ActionAttributeUpdate               = "PUT"
