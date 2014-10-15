@@ -2,13 +2,13 @@ package dnm
 
 import (
 	"fmt"
-	"strings"
-	"time"
 	"github.com/flowhealth/glog"
 	"github.com/flowhealth/goamz/aws"
 	"github.com/flowhealth/goamz/dynamodb"
 	"github.com/flowhealth/goannoying"
 	"github.com/flowhealth/gocontract/contract"
+	"strings"
+	"time"
 )
 
 const (
@@ -31,7 +31,8 @@ type IStore interface {
 	Find(query *dynamodb.Query) ([]map[string]*dynamodb.Attribute, *TError)
 	Save(...dynamodb.Attribute) *TError
 	SaveConditional(attrs []dynamodb.Attribute, expected []dynamodb.Attribute) *TError
-	Update(key *dynamodb.Key, attrs...dynamodb.Attribute) *TError
+	UpdateAttributesWithUpdateExpression(key *dynamodb.Key, attrs ...dynamodb.UpdateExpressionAttribute) *TError
+	Update(key *dynamodb.Key, attrs ...dynamodb.Attribute) *TError
 	UpdateConditional(key *dynamodb.Key, attrs []dynamodb.Attribute, expected []dynamodb.Attribute) *TError
 	Delete(key *dynamodb.Key) *TError
 	DeleteConditional(key *dynamodb.Key, expected []dynamodb.Attribute) *TError
@@ -204,6 +205,15 @@ func (self *TStore) SaveConditional(attrs []dynamodb.Attribute, expected []dynam
 			glog.Errorf("Failed save query: %s, error: %v", query.String(), err)
 			return self.makeError(SaveErr, err)
 		}
+	} else {
+		return nil
+	}
+}
+
+func (self *TStore) UpdateAttributesWithUpdateExpression(key *dynamodb.Key, attrs ...dynamodb.UpdateExpressionAttribute) *TError {
+	if _, err := self.table.UpdateAttributesWithUpdateExpression(key, attrs); err != nil {
+		glog.Errorf("Failed update item: %v, with attributes %v, error: %v", key, attrs, err)
+		return self.makeError(UpdateErr, err)
 	} else {
 		return nil
 	}
