@@ -31,7 +31,8 @@ type IStore interface {
 	Find(query *dynamodb.Query) ([]map[string]*dynamodb.Attribute, *TError)
 	Save(...dynamodb.Attribute) *TError
 	SaveConditional(attrs []dynamodb.Attribute, expected []dynamodb.Attribute) *TError
-	UpdateAttributesWithUpdateExpression(key *dynamodb.Key, attrs ...dynamodb.UpdateExpressionAttribute) *TError
+	UpdateWithUpdateExpression(key *dynamodb.Key, attrs ...dynamodb.UpdateExpressionAttribute) *TError
+	UpdateConditionalWithUpdateExpression(key *dynamodb.Key, condition *dynamodb.ConditionExpression, attrs ...dynamodb.UpdateExpressionAttribute) *TError
 	Update(key *dynamodb.Key, attrs ...dynamodb.Attribute) *TError
 	UpdateConditional(key *dynamodb.Key, attrs []dynamodb.Attribute, expected []dynamodb.Attribute) *TError
 	Delete(key *dynamodb.Key) *TError
@@ -210,9 +211,18 @@ func (self *TStore) SaveConditional(attrs []dynamodb.Attribute, expected []dynam
 	}
 }
 
-func (self *TStore) UpdateAttributesWithUpdateExpression(key *dynamodb.Key, attrs ...dynamodb.UpdateExpressionAttribute) *TError {
+func (self *TStore) UpdateWithUpdateExpression(key *dynamodb.Key, attrs ...dynamodb.UpdateExpressionAttribute) *TError {
 	if _, err := self.table.UpdateAttributesWithUpdateExpression(key, attrs); err != nil {
 		glog.Errorf("Failed update item: %v, with attributes %v, error: %v", key, attrs, err)
+		return self.makeError(UpdateErr, err)
+	} else {
+		return nil
+	}
+}
+
+func (self *TStore) UpdateConditionalWithUpdateExpression(key *dynamodb.Key, condition *dynamodb.ConditionExpression, attrs ...dynamodb.UpdateExpressionAttribute) *TError {
+	if _, err := self.table.ConditionalUpdateAttributesWithUpdateExpression(key, attrs, condition); err != nil {
+		glog.Errorf("Failed update item: %v, with attributes %v, condition: %v, error: %v", key, attrs, condition, err)
 		return self.makeError(UpdateErr, err)
 	} else {
 		return nil
