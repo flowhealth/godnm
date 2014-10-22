@@ -31,6 +31,7 @@ type IStore interface {
 	Find(query *dynamodb.Query) ([]map[string]*dynamodb.Attribute, *TError)
 	Save(...dynamodb.Attribute) *TError
 	SaveConditional(attrs []dynamodb.Attribute, expected []dynamodb.Attribute) *TError
+	SaveConditionalWithConditionExpression(attrs []dynamodb.Attribute, condition *dynamodb.ConditionExpression) *TError
 	UpdateWithUpdateExpression(key *dynamodb.Key, attrs ...dynamodb.UpdateExpressionAttribute) *TError
 	UpdateConditionalWithUpdateExpression(key *dynamodb.Key, condition *dynamodb.ConditionExpression, attrs ...dynamodb.UpdateExpressionAttribute) *TError
 	Update(key *dynamodb.Key, attrs ...dynamodb.Attribute) *TError
@@ -198,6 +199,24 @@ func (self *TStore) SaveConditional(attrs []dynamodb.Attribute, expected []dynam
 	query.AddItem(attrs)
 	if expected != nil {
 		query.AddExpected(expected)
+	}
+	if _, err := self.table.RunPutItemQuery(query); err != nil {
+		if strings.HasPrefix(err.Error(), ConditionalDynamoError) {
+			return ConditionalErr
+		} else {
+			glog.Errorf("Failed save query: %s, error: %v", query.String(), err)
+			return self.makeError(SaveErr, err)
+		}
+	} else {
+		return nil
+	}
+}
+
+func (self *TStore) SaveConditionalWithConditionExpression(attrs []dynamodb.Attribute, condition *dynamodb.ConditionExpression) *TError {
+	query := dynamodb.NewQuery(self.table)
+	query.AddItem(attrs)
+	if condition != nil {
+		query.AddConditionExpression(condition)
 	}
 	if _, err := self.table.RunPutItemQuery(query); err != nil {
 		if strings.HasPrefix(err.Error(), ConditionalDynamoError) {
