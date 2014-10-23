@@ -241,8 +241,12 @@ func (self *TStore) UpdateWithUpdateExpression(key *dynamodb.Key, attrs ...dynam
 
 func (self *TStore) UpdateConditionalWithUpdateExpression(key *dynamodb.Key, condition *dynamodb.ConditionExpression, attrs ...dynamodb.UpdateExpressionAttribute) *TError {
 	if _, err := self.table.ConditionalUpdateAttributesWithUpdateExpression(key, attrs, condition); err != nil {
-		glog.Errorf("Failed update item: %v, with attributes %v, condition: %v, error: %v", key, attrs, condition, err)
-		return self.makeError(UpdateErr, err)
+		if strings.HasPrefix(err.Error(), ConditionalDynamoError) {
+			return ConditionalErr
+		} else {
+			glog.Errorf("Failed update item: %v, with attributes %v, condition: %v, error: %v", key, attrs, condition, err)
+			return self.makeError(UpdateErr, err)
+		}
 	} else {
 		return nil
 	}
