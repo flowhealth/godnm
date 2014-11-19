@@ -2,11 +2,12 @@ package dnm
 
 import (
 	"fmt"
-	"github.com/flowhealth/glog"
+	"github.com/flowhealth/commons/fhlog"
 	"github.com/flowhealth/goamz/aws"
 	"github.com/flowhealth/goamz/dynamodb"
 	"github.com/flowhealth/goannoying"
 	"github.com/flowhealth/gocontract/contract"
+	log "github.com/flowhealth/logrus"
 	"strings"
 	"time"
 )
@@ -86,49 +87,47 @@ func MakeStore(tableDesc *dynamodb.TableDescriptionT, cfg *TStoreConfig) IStore 
 }
 
 func (self *TStore) findTableByName(name string) bool {
-	glog.V(5).Infof("Searching for table %s in table list", name)
+	log.WithField(LogTable, name).Debug("Searching for table in table list")
 	tables, err := self.dynamoServer.ListTables()
-	glog.V(5).Infof("Got table list: %v", tables)
 	contract.RequireNoError(err)
 	for _, t := range tables {
 		if t == name {
-			glog.V(5).Infof("Found table %s", name)
 			return true
 		}
 	}
-	glog.V(5).Infof("Table %s wasnt found", name)
+	log.WithField(LogTable, name).Debug("Table not found")
 	return false
 }
 
 func (self *TStore) Init() *TError {
 	tableName := self.tableDesc.TableName
-	glog.V(3).Infof("Initializing dnm.StoreStore(%s) table", tableName)
+	log.WithField(LogTable, tableName).Debug("Initializing dnm.StoreStore")
 	tableExists := self.findTableByName(tableName)
 	if tableExists {
-		glog.V(3).Infof("dnm.StoreStore table '%s' exists, skipping init", tableName)
-		glog.V(3).Infof("Waiting until table '%s' becomes active", tableName)
+		log.WithField(LogTable, tableName).Debug("Waiting until table becomes active")
 		self.waitUntilTableIsActive(tableName)
-		glog.V(3).Infof("dnm.StoreStore table '%s' is active", tableName)
 		return nil
 	} else {
-		glog.Infof("Creating dnm.StoreStore table '%s'", tableName)
+		log.WithField(LogTable, tableName).Info("Creating table")
 		status, err := self.dynamoServer.CreateTable(*self.tableDesc)
 		if err != nil {
-			glog.Fatalf("Unexpected error: %s during dnm.StoreStore table intialization, cannot proceed", err.Error())
+			log.WithField(LogTable, tableName).Fatal("Unexpected error during dnm.StoreStore table intialization, cannot proceed")
 			return self.makeError(InitGeneralErr, err)
 		}
 		if status == TableStatusCreating {
-			glog.V(3).Infof("Waiting until dnm.StoreStore table '%s' becomes active", tableName)
+			log.WithField(LogTable, tableName).Debug("Waiting until table becomes active")
 			self.waitUntilTableIsActive(tableName)
-			glog.V(3).Infof("dnm.StoreStore table '%s' become active", tableName)
 			return nil
 		}
 		if status == TableStatusActive {
-			glog.V(3).Infof("dnm.StoreStore table '%s' is active", tableName)
+			log.WithField(LogTable, tableName).Debug("Table is active")
 			return nil
 		}
 		err = fmt.Errorf("Unexpected status: %s during dnm.StoreStore table intialization, cannot proceed", status)
-		glog.Fatal(err)
+		log.WithFields(log.Fields{
+			fhlog.FHError: err,
+			LogTable:      tableName,
+		}).Fatal("Unexpected error during dnm.StoreStore table intialization, cannot proceed")
 		return InitUnknownStatusErr
 	}
 }
@@ -149,23 +148,30 @@ func (self *TStore) waitUntilTableIsActive(table string) {
 		return
 	}, checkInterval, checkTimeout)
 	if !ok {
-		glog.Fatalf("Failed with: %s", err.Error())
+		log.WithFields(log.Fields{
+			fhlog.FHError: err,
+			LogTable:      table,
+		}).Fatal("Failed waiting on table")
 	}
 }
 
 func (self *TStore) Destroy() *TError {
-	glog.Info("Destroying tables")
+	log.WithField(LogTable, self.tableDesc.TableName).Debug("Destroying table")
 	tableExists := self.findTableByName(self.tableDesc.TableName)
 	if !tableExists {
-		glog.Infof("Table %s doesn't exists, skipping deletion", self.tableDesc.TableName)
+		log.WithField(LogTable, self.tableDesc.TableName).Debug("Table doesn't exists, skipping deletion")
 		return nil
 	} else {
 		_, err := self.dynamoServer.DeleteTable(*self.tableDesc)
 		if err != nil {
-			glog.Fatal(err)
+			log.WithFields(log.Fields{
+				fhlog.FHError: err,
+				LogTable:      self.tableDesc.TableName,
+			}).Error("Failed to delete table")
+
 			return self.makeError(DestroyGeneralErr, err)
 		}
-		glog.Infof("Table %s deleted successfully", self.tableDesc.TableName)
+		log.WithField(LogTable, self.tableDesc.TableName).Debug("Table deleted successfully")
 	}
 	return nil
 }
@@ -175,17 +181,23 @@ func (self *TStore) Delete(key *dynamodb.Key) *TError {
 }
 
 func (self *TStore) DeleteConditional(key *dynamodb.Key, expected []dynamodb.Attribute) *TError {
-	glog.V(5).Infof("Deleting item with key : %s", key)
+	log.WithFields(log.Fields{
+		LogKey:   key,
+		LogTable: self.tableDesc.TableName,
+	}).Debug("Deleting item with key")
+
 	ok, err := self.table.ConditionalDeleteItem(key, expected)
 	if ok {
-		glog.V(5).Infof("Succeed delete item : %s", key)
 		return nil
 	} else {
 		if strings.HasPrefix(err.Error(), ConditionalDynamoError) {
 			return ConditionalErr
-		} else {
-			glog.Errorf("Failed to delete item: %s, error: %v", key, err)
 		}
+		log.WithFields(log.Fields{
+			LogKey:        key,
+			LogTable:      self.tableDesc.TableName,
+			fhlog.FHError: err.Error(),
+		}).Debug("Error delete item")
 		return self.makeError(DeleteErr, err)
 	}
 }
@@ -204,7 +216,12 @@ func (self *TStore) SaveConditional(attrs []dynamodb.Attribute, expected []dynam
 		if strings.HasPrefix(err.Error(), ConditionalDynamoError) {
 			return ConditionalErr
 		} else {
-			glog.Errorf("Failed save query: %s, error: %v", query.String(), err)
+			log.WithFields(log.Fields{
+				LogQuery:      query.String(),
+				LogTable:      self.tableDesc.TableName,
+				fhlog.FHError: err.Error(),
+			}).Debug("Error delete item")
+
 			return self.makeError(SaveErr, err)
 		}
 	} else {
@@ -222,7 +239,12 @@ func (self *TStore) SaveConditionalWithConditionExpression(attrs []dynamodb.Attr
 		if strings.HasPrefix(err.Error(), ConditionalDynamoError) {
 			return ConditionalErr
 		} else {
-			glog.Errorf("Failed save query: %s, error: %v", query.String(), err)
+			log.WithFields(log.Fields{
+				LogQuery:      query.String(),
+				LogTable:      self.tableDesc.TableName,
+				fhlog.FHError: err.Error(),
+			}).Debug("Error save")
+
 			return self.makeError(SaveErr, err)
 		}
 	} else {
@@ -233,7 +255,13 @@ func (self *TStore) SaveConditionalWithConditionExpression(attrs []dynamodb.Attr
 func (self *TStore) UpdateWithUpdateExpression(key *dynamodb.Key, returnValues string,
 	attrs ...dynamodb.UpdateExpressionAttribute) (map[string]*dynamodb.Attribute, *TError) {
 	if _, attrs, err := self.table.UpdateAttributesWithUpdateExpression(key, attrs, returnValues); err != nil {
-		glog.Errorf("Failed update item: %v, with attributes %v, error: %v", key, attrs, err)
+		log.WithFields(log.Fields{
+			LogKey:        key,
+			LogAttributes: attrs,
+			LogTable:      self.tableDesc.TableName,
+			fhlog.FHError: err.Error(),
+		}).Debug("Error update item")
+
 		return nil, self.makeError(UpdateErr, err)
 	} else {
 		return attrs, nil
@@ -247,7 +275,14 @@ func (self *TStore) UpdateConditionalWithUpdateExpression(key *dynamodb.Key, con
 		if strings.HasPrefix(err.Error(), ConditionalDynamoError) {
 			return nil, ConditionalErr
 		} else {
-			glog.Errorf("Failed update item: %v, with attributes %v, condition: %v, error: %v", key, attrs, condition, err)
+			log.WithFields(log.Fields{
+				LogKey:          key,
+				LogAttributes:   attrs,
+				LogCondition:    condition,
+				LogReturnValues: returnValues,
+				LogTable:        self.tableDesc.TableName,
+				fhlog.FHError:   err.Error(),
+			}).Debug("Error update item")
 			return nil, self.makeError(UpdateErr, err)
 		}
 	} else {
@@ -264,7 +299,12 @@ func (self *TStore) UpdateConditional(key *dynamodb.Key, attrs []dynamodb.Attrib
 		if strings.HasPrefix(err.Error(), ConditionalDynamoError) {
 			return ConditionalErr
 		} else {
-			glog.Errorf("Failed update item: %v, with attributes %v, error: %v", key, attrs, err)
+			log.WithFields(log.Fields{
+				LogKey:        key,
+				LogAttributes: attrs,
+				fhlog.FHError: err.Error(),
+			}).Debug("Error update item")
+
 			return self.makeError(UpdateErr, err)
 		}
 	} else {
@@ -274,25 +314,32 @@ func (self *TStore) UpdateConditional(key *dynamodb.Key, attrs []dynamodb.Attrib
 
 func (self *TStore) Find(query *dynamodb.Query) ([]map[string]*dynamodb.Attribute, *TError) {
 	if items, err := self.table.RunQuery(query); err != nil {
-		glog.Errorf("Failed query: %s, error: %v", query.String(), err)
+		log.WithFields(log.Fields{
+			LogQuery:      query.String(),
+			LogTable:      self.tableDesc.TableName,
+			fhlog.FHError: err.Error(),
+		}).Debug("Error update item")
+
 		return nil, self.makeError(LookupErr, err)
 	} else {
-		glog.V(5).Infof("Succeed item %#v fetch, got: %v", query, items)
 		return items, nil
 	}
 }
 
 func (self *TStore) Get(key *dynamodb.Key) (map[string]*dynamodb.Attribute, *TError) {
-	glog.V(5).Infof("Getting item with pk: %s", key)
 	if attrMap, err := self.table.GetItem(key); err != nil {
 		if err == dynamodb.ErrNotFound {
 			return nil, NotFoundErr
 		} else {
-			glog.Errorf("Failed to lookup an item with key %#v, because: %v", key, err)
+			log.WithFields(log.Fields{
+				LogKey:        key,
+				LogTable:      self.tableDesc.TableName,
+				fhlog.FHError: err.Error(),
+			}).Debug("Failed to lookup an item")
+
 			return nil, self.makeError(LookupErr, err)
 		}
 	} else {
-		glog.V(5).Infof("Succeed item %s fetch, got: %v", key, attrMap)
 		return attrMap, nil
 	}
 }
@@ -306,12 +353,20 @@ func (self *TStore) ParallelScanPartialLimit(attributeComparisons []dynamodb.Att
 		if err == dynamodb.ErrNotFound {
 			return nil, nil, NotFoundErr
 		} else {
-			glog.Errorf("Failed to scan, attributeComparisons: %v, exclusiveStartKey: %v, segment: %d, totalSegments: %d, limit: %d, err: %v",
-				attributeComparisons, exclusiveStartKey, segment, totalSegments, limit, err)
+			log.WithFields(log.Fields{
+				LogKey:                  key,
+				LogTable:                self.tableDesc.TableName,
+				LogAttributeComparisons: attributeComparisons,
+				LogExclusiveStartKey:    exclusiveStartKey,
+				LogSegment:              segment,
+				LogTotalSegments:        totalSegments,
+				LogLimit:                limit,
+				fhlog.FHError:           err.Error(),
+			}).Debug("Failed to scan")
+
 			return nil, nil, self.makeError(LookupErr, err)
 		}
 	} else {
-		glog.V(5).Infof("Succeed item %s fetch, got: %v", key, attrMap)
 		return attrMap, key, nil
 	}
 }
