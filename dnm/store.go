@@ -33,6 +33,7 @@ type IStore interface {
 	Save(...dynamodb.Attribute) *TError
 	SaveConditional(attrs []dynamodb.Attribute, expected []dynamodb.Attribute) *TError
 	SaveConditionalWithConditionExpression(attrs []dynamodb.Attribute, condition *dynamodb.ConditionExpression) *TError
+	DeleteAttributesWithUpdateExpression(key *dynamodb.Key, returnValues string, attrs ...dynamodb.UpdateExpressionAttribute) (map[string]*dynamodb.Attribute, *TError)
 	UpdateWithUpdateExpression(key *dynamodb.Key, returnValues string, attrs ...dynamodb.UpdateExpressionAttribute) (map[string]*dynamodb.Attribute, *TError)
 	UpdateConditionalWithUpdateExpression(key *dynamodb.Key, condition *dynamodb.ConditionExpression, returnValues string, attrs ...dynamodb.UpdateExpressionAttribute) (map[string]*dynamodb.Attribute, *TError)
 	Update(key *dynamodb.Key, attrs ...dynamodb.Attribute) *TError
@@ -283,6 +284,26 @@ func (self *TStore) UpdateConditionalWithUpdateExpression(key *dynamodb.Key, con
 				LogTable:        self.tableDesc.TableName,
 				fhlog.FHError:   err.Error(),
 			}).Debug("Error update item")
+			return nil, self.makeError(UpdateErr, err)
+		}
+	} else {
+		return attrs, nil
+	}
+}
+
+func (self *TStore) DeleteAttributesWithUpdateExpression(key *dynamodb.Key, returnValues string, attrs ...dynamodb.UpdateExpressionAttribute) (map[string]*dynamodb.Attribute, *TError) {
+
+	if _, attrs, err := self.table.DeleteAttributesWithUpdateExpression(key, attrs, returnValues); err != nil {
+		if strings.HasPrefix(err.Error(), ConditionalDynamoError) {
+			return nil, ConditionalErr
+		} else {
+			log.WithFields(log.Fields{
+				LogKey:          key,
+				LogAttributes:   attrs,
+				LogReturnValues: returnValues,
+				LogTable:        self.tableDesc.TableName,
+				fhlog.FHError:   err.Error(),
+			}).Debug("Error deleting attributes")
 			return nil, self.makeError(UpdateErr, err)
 		}
 	} else {
