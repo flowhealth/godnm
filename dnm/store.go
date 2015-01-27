@@ -169,7 +169,7 @@ func (self *TStore) Destroy() *TError {
 			log.WithFields(log.Fields{
 				fhlog.FHError: err,
 				LogTable:      self.tableDesc.TableName,
-			}).Error("Failed to delete table")
+			}).Error("Error in Destroy()")
 
 			return self.makeError(DestroyGeneralErr, err)
 		}
@@ -199,7 +199,7 @@ func (self *TStore) DeleteConditional(key *dynamodb.Key, expected []dynamodb.Att
 			LogKey:        key,
 			LogTable:      self.tableDesc.TableName,
 			fhlog.FHError: err.Error(),
-		}).Debug("Error delete item")
+		}).Error("Error in DeleteConditional()")
 		return self.makeError(DeleteErr, err)
 	}
 }
@@ -222,7 +222,7 @@ func (self *TStore) SaveConditional(attrs []dynamodb.Attribute, expected []dynam
 				LogQuery:      query.String(),
 				LogTable:      self.tableDesc.TableName,
 				fhlog.FHError: err.Error(),
-			}).Debug("Error delete item")
+			}).Error("Error in SaveConditional()")
 
 			return self.makeError(SaveErr, err)
 		}
@@ -245,7 +245,7 @@ func (self *TStore) SaveConditionalWithConditionExpression(attrs []dynamodb.Attr
 				LogQuery:      query.String(),
 				LogTable:      self.tableDesc.TableName,
 				fhlog.FHError: err.Error(),
-			}).Debug("Error save")
+			}).Error("Error in SaveConditionalWithConditionExpression()")
 
 			return self.makeError(SaveErr, err)
 		}
@@ -262,7 +262,7 @@ func (self *TStore) UpdateWithUpdateExpression(key *dynamodb.Key, returnValues s
 			LogAttributes: attrs,
 			LogTable:      self.tableDesc.TableName,
 			fhlog.FHError: err.Error(),
-		}).Debug("Error update item")
+		}).Error("Error in UpdateWithUpdateExpression()")
 
 		return nil, self.makeError(UpdateErr, err)
 	} else {
@@ -284,7 +284,7 @@ func (self *TStore) UpdateConditionalWithUpdateExpression(key *dynamodb.Key, con
 				LogReturnValues: returnValues,
 				LogTable:        self.tableDesc.TableName,
 				fhlog.FHError:   err.Error(),
-			}).Debug("Error update item")
+			}).Error("Error in UpdateConditionalWithUpdateExpression()")
 			return nil, self.makeError(UpdateErr, err)
 		}
 	} else {
@@ -304,7 +304,7 @@ func (self *TStore) DeleteAttributesWithUpdateExpression(key *dynamodb.Key, retu
 				LogReturnValues: returnValues,
 				LogTable:        self.tableDesc.TableName,
 				fhlog.FHError:   err.Error(),
-			}).Debug("Error deleting attributes")
+			}).Error("Error in DeleteAttributesWithUpdateExpression()")
 			return nil, self.makeError(UpdateErr, err)
 		}
 	} else {
@@ -325,7 +325,7 @@ func (self *TStore) ModifyAttributesWithUpdateExpression(key *dynamodb.Key, cond
 				LogReturnValues: returnValues,
 				LogTable:        self.tableDesc.TableName,
 				fhlog.FHError:   err.Error(),
-			}).Debug("Error modifying attributes")
+			}).Error("Error in ModifyAttributesWithUpdateExpression()")
 			return nil, self.makeError(UpdateErr, err)
 		}
 	} else {
@@ -346,7 +346,7 @@ func (self *TStore) UpdateConditional(key *dynamodb.Key, attrs []dynamodb.Attrib
 				LogKey:        key,
 				LogAttributes: attrs,
 				fhlog.FHError: err.Error(),
-			}).Debug("Error update item")
+			}).Error("Error in UpdateConditional()")
 
 			return self.makeError(UpdateErr, err)
 		}
@@ -361,7 +361,7 @@ func (self *TStore) Find(query *dynamodb.Query) ([]map[string]*dynamodb.Attribut
 			LogQuery:      query.String(),
 			LogTable:      self.tableDesc.TableName,
 			fhlog.FHError: err.Error(),
-		}).Debug("Error update item")
+		}).Error("Error in Find()")
 
 		return nil, self.makeError(LookupErr, err)
 	} else {
@@ -378,7 +378,7 @@ func (self *TStore) Get(key *dynamodb.Key) (map[string]*dynamodb.Attribute, *TEr
 				LogKey:        key,
 				LogTable:      self.tableDesc.TableName,
 				fhlog.FHError: err.Error(),
-			}).Debug("Failed to lookup an item")
+			}).Error("Error in Get()")
 
 			return nil, self.makeError(LookupErr, err)
 		}
@@ -405,7 +405,7 @@ func (self *TStore) ParallelScanPartialLimit(attributeComparisons []dynamodb.Att
 				LogTotalSegments:        totalSegments,
 				LogLimit:                limit,
 				fhlog.FHError:           err.Error(),
-			}).Debug("Failed to scan")
+			}).Error("Error in ParallelScanPartialLimit()")
 
 			return nil, nil, self.makeError(LookupErr, err)
 		}
