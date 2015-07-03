@@ -219,7 +219,6 @@ func (self *TStore) SaveConditional(attrs []dynamodb.Attribute, expected []dynam
 			return ConditionalErr
 		} else {
 			log.WithFields(log.Fields{
-				LogQuery:      query.String(),
 				LogTable:      self.tableDesc.TableName,
 				fhlog.FHError: err.Error(),
 			}).Error("Error in SaveConditional()")
@@ -242,7 +241,6 @@ func (self *TStore) SaveConditionalWithConditionExpression(attrs []dynamodb.Attr
 			return ConditionalErr
 		} else {
 			log.WithFields(log.Fields{
-				LogQuery:      query.String(),
 				LogTable:      self.tableDesc.TableName,
 				fhlog.FHError: err.Error(),
 			}).Error("Error in SaveConditionalWithConditionExpression()")
@@ -358,7 +356,6 @@ func (self *TStore) UpdateConditional(key *dynamodb.Key, attrs []dynamodb.Attrib
 func (self *TStore) Find(query *dynamodb.Query) ([]map[string]*dynamodb.Attribute, *TError) {
 	if items, err := self.table.RunQuery(query); err != nil {
 		log.WithFields(log.Fields{
-			LogQuery:      query.String(),
 			LogTable:      self.tableDesc.TableName,
 			fhlog.FHError: err.Error(),
 		}).Error("Error in Find()")
